@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>หารบิล — ตัวช่วยหารค่าอาหาร</title>
+<meta name="description" content="สแกนใบเสร็จ แล้วหารค่าใช้จ่ายกับเพื่อนได้ทันที ไม่ต้องมีเซิร์ฟเวอร์">
+<meta name="theme-color" content="#FB8A3C">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Space+Mono:wght@400;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="receipt" id="receipt">
+
+  <!-- Header -->
+  <header class="receipt__head">
+    <div class="brand">
+      <span class="brand__badge" aria-hidden="true">🧾</span>
+      <div>
+        <h1 class="receipt__title">หารบิล</h1>
+        <p class="receipt__subtitle">สแกน • แบ่ง • เคลียร์กันได้ ง่าย ๆ ใน 4 ขั้นตอน</p>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="เมนูหลัก">
+    <button class="tab" data-tab="scan" role="tab" aria-selected="true">
+      <span class="tab__num">1</span><span class="tab__icon" aria-hidden="true">🚀</span><span class="tab__label">เริ่มต้น</span>
+    </button>
+    <button class="tab" data-tab="items" role="tab" aria-selected="false">
+      <span class="tab__num">2</span><span class="tab__icon" aria-hidden="true">🧾</span><span class="tab__label">รายการ</span>
+    </button>
+    <button class="tab" data-tab="people" role="tab" aria-selected="false">
+      <span class="tab__num">3</span><span class="tab__icon" aria-hidden="true">👥</span><span class="tab__label">คนกิน</span>
+    </button>
+    <button class="tab" data-tab="split" role="tab" aria-selected="false">
+      <span class="tab__num">4</span><span class="tab__icon" aria-hidden="true">🤝</span><span class="tab__label">หารบิล</span>
+    </button>
+  </nav>
+
+  <!-- SCAN / START PANEL -->
+  <section class="panel" data-panel="scan" id="panel-scan">
+    <p class="panel__hint">เริ่มบิลใหม่ได้ 2 ทาง เลือกทางที่สะดวกกว่าได้เลย</p>
+
+    <div class="start-choice">
+      <div class="start-option">
+        <div class="start-option__head">
+          <span class="start-option__icon">📷</span>
+          <div>
+            <p class="start-option__title">สแกนใบเสร็จ</p>
+            <p class="start-option__desc">ถ่ายรูปหรือเลือกรูป ระบบจะอ่านรายการให้อัตโนมัติ</p>
+          </div>
+        </div>
+        <div class="scan-actions">
+          <label class="btn btn--primary btn--big" for="cameraInput">
+            <span class="btn__icon">📷</span> ถ่ายรูปใบเสร็จ
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+          </label>
+          <label class="btn btn--ghost btn--big" for="fileInput">
+            <span class="btn__icon">🖼️</span> เลือกรูปจากคลัง
+            <input type="file" id="fileInput" accept="image/*" hidden>
+          </label>
+        </div>
+      </div>
+
+      <div class="start-choice__divider"><span>หรือ</span></div>
+
+      <div class="start-option">
+        <div class="start-option__head">
+          <span class="start-option__icon">✍️</span>
+          <div>
+            <p class="start-option__title">กรอกเอง</p>
+            <p class="start-option__desc">ไม่มีใบเสร็จก็เริ่มได้ พิมพ์รายการด้วยตัวเอง</p>
+          </div>
+        </div>
+        <button class="btn btn--primary btn--big" id="manualStartBtn" type="button">✍️ เริ่มกรอกรายการเอง →</button>
+      </div>
+    </div>
+
+    <div id="scanPreviewWrap" class="scan-preview" hidden>
+      <img id="scanPreview" alt="ตัวอย่างใบเสร็จที่เลือก">
+    </div>
+
+    <div id="scanStatus" class="scan-status" hidden></div>
+
+    <div id="ocrRawWrap" class="ocr-raw" hidden>
+      <p class="field-label">ข้อความที่อ่านได้ (แก้ไขได้ก่อนแปลงเป็นรายการ)</p>
+      <textarea id="ocrRawText" rows="8" spellcheck="false"></textarea>
+      <button class="btn btn--primary btn--big" id="parseBtn" type="button">แปลงเป็นรายการ →</button>
+    </div>
+  </section>
+
+  <!-- ITEMS PANEL -->
+  <section class="panel" data-panel="items" id="panel-items" hidden>
+
+    <div class="section-row">
+      <p class="field-label">🏷️ หมวดหมู่</p>
+      <button class="btn btn--tiny" id="addCategoryBtn" type="button">+ เพิ่มหมวดหมู่</button>
+    </div>
+    <div class="chips" id="categoryChips"></div>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <div class="section-row">
+      <p class="field-label">🍽️ รายการอาหาร</p>
+      <button class="btn btn--tiny" id="addItemBtn" type="button">+ เพิ่มรายการ</button>
+    </div>
+
+    <div class="items-list" id="itemsBody"></div>
+
+    <div class="empty-hint" id="itemsEmptyHint" hidden>
+      <span class="empty-hint__emoji">📝</span>
+      <p>ยังไม่มีรายการ ลองสแกนใบเสร็จ หรือกด “+ เพิ่มรายการ” ด้านบน</p>
+    </div>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <div class="charges">
+      <div class="setting-block">
+        <label class="toggle-row">
+          <span class="toggle-row__label">🧮 ภาษีมูลค่าเพิ่ม (VAT)</span>
+          <span class="switch">
+            <input type="checkbox" id="vatEnabledInput">
+            <span class="switch__track"><span class="switch__thumb"></span></span>
+          </span>
+        </label>
+        <div class="setting-sub" id="vatSubOptions" hidden>
+          <div class="segmented" id="vatModeSegmented">
+            <button type="button" class="segmented__btn" data-vatmode="exclusive">ราคายังไม่รวม VAT</button>
+            <button type="button" class="segmented__btn" data-vatmode="inclusive">ราคารวม VAT แล้ว</button>
+          </div>
+          <label class="charge-row">
+            <span>อัตรา VAT</span>
+            <span class="charge-input"><input type="number" id="vatPercentInput" min="0" step="0.5" value="7"> %</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-block">
+        <label class="toggle-row">
+          <span class="toggle-row__label">💁 ค่าบริการ (Service charge)</span>
+          <span class="switch">
+            <input type="checkbox" id="serviceEnabledInput">
+            <span class="switch__track"><span class="switch__thumb"></span></span>
+          </span>
+        </label>
+        <div class="setting-sub" id="serviceSubOptions" hidden>
+          <label class="charge-row">
+            <span>อัตราค่าบริการ</span>
+            <span class="charge-input"><input type="number" id="servicePercentInput" min="0" step="0.5" value="10"> %</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="totals-box">
+      <div class="totals-row"><span id="lblSubtotal">รวมรายการ</span><span id="sumSubtotal">0.00</span></div>
+      <div class="totals-row"><span>ค่าบริการ</span><span id="sumService">0.00</span></div>
+      <div class="totals-row"><span id="lblVat">ภาษี VAT</span><span id="sumVat">0.00</span></div>
+      <div class="totals-row totals-row--grand"><span>ยอดรวมทั้งบิล</span><span id="sumGrand">0.00</span></div>
+    </div>
+  </section>
+
+  <!-- PEOPLE PANEL -->
+  <section class="panel" data-panel="people" id="panel-people" hidden>
+    <div class="section-row">
+      <p class="field-label">👥 คนที่ร่วมกินบิลนี้</p>
+      <button class="btn btn--tiny" id="addPersonBtn" type="button">+ เพิ่มคน</button>
+    </div>
+    <ul class="people-list" id="peopleList"></ul>
+    <div class="empty-hint" id="peopleEmptyHint" hidden>
+      <span class="empty-hint__emoji">🙋</span>
+      <p>ยังไม่มีรายชื่อ ลองกด “+ เพิ่มคน” เพื่อเริ่มเพิ่มเพื่อนร่วมบิล</p>
+    </div>
+
+    <div class="divider" aria-hidden="true"></div>
+
+    <p class="field-label">🍴 ใครกินอะไรบ้าง</p>
+    <p class="panel__hint">แตะชื่อในแต่ละรายการเพื่อระบุว่าใครกินรายการนั้น (ใช้กับโหมด “หารตามรายการที่กิน” เท่านั้น) — ถ้าไม่เลือกใครเลย ระบบจะหารรายการนั้นให้ทุกคนเท่า ๆ กันโดยอัตโนมัติ</p>
+    <div id="assignList" class="assign-list"></div>
+  </section>
+
+  <!-- SPLIT PANEL -->
+  <section class="panel" data-panel="split" id="panel-split" hidden>
+    <div class="split-mode" role="tablist" aria-label="เลือกวิธีหารบิล">
+      <button class="split-mode__btn is-active" data-mode="equal" type="button">✂️ หารเท่ากัน</button>
+      <button class="split-mode__btn" data-mode="itemized" type="button">🍽️ หารตามรายการที่กิน</button>
+    </div>
+
+    <div id="splitResult" class="split-result"></div>
+
+    <div class="stamp-note" id="stampNote" hidden>✔ คำนวณเรียบร้อย</div>
+  </section>
+
+  <footer class="receipt__foot">
+    <div class="divider" aria-hidden="true"></div>
+    <div class="foot-actions">
+      <button class="btn btn--ghost btn--small" id="newBillBtn" type="button">🗑️ เริ่มบิลใหม่</button>
+    </div>
+    <p class="foot-note">🔒 ข้อมูลทั้งหมดเก็บไว้ในโทรศัพท์ของคุณเท่านั้น ไม่มีการส่งขึ้นเซิร์ฟเวอร์</p>
+  </footer>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

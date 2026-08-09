@@ -1,0 +1,26 @@
+{
+  "name": "หารบิล — ตัวช่วยหารค่าอาหาร",
+  "short_name": "หารบิล",
+  "description": "สแกนใบเสร็จแล้วหารค่าใช้จ่ายกับเพื่อนได้ทันที ไม่ต้องมีเซิร์ฟเวอร์",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7ED",
+  "theme_color": "#FB8A3C",
+  "lang": "th",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
