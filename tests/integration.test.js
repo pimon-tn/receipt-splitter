@@ -216,6 +216,31 @@ describe('การใช้งานจริงทั้งวงจร: เ�
     assert.equal($('#sumSubtotal').textContent, '75.00');
   });
 
+  test('แสดงจำนวนรายการ และล้างรายชื่อพร้อมการระบุผู้กินได้', async () => {
+    setupDom();
+    await bootApp();
+
+    assert.equal($('#itemsCount').textContent, '0 รายการ');
+    assert.equal($('#categoryChips'), null, 'ไม่ควรแสดงส่วนหมวดหมู่แล้ว');
+
+    addItemViaModal({ name: 'ข้าวผัด', qty: 1, price: 80 });
+    assert.equal($('#itemsCount').textContent, '1 รายการ');
+
+    click($('#addPersonBtn'));
+    click($('#addPersonBtn'));
+    assert.equal($('#clearPeopleBtn').hidden, false);
+
+    click($('.tab[data-tab="people"]'));
+    click($$('#assignList .assign-item')[0].querySelectorAll('.assign-tag:not(.assign-tag--all)')[0]);
+    click($('#clearPeopleBtn'));
+
+    assert.equal($$('#peopleList li').length, 0);
+    assert.equal($('#clearPeopleBtn').hidden, true);
+    const saved = JSON.parse(global.localStorage.getItem('receipt-splitter:bill'));
+    assert.deepEqual(saved.people, []);
+    assert.deepEqual(saved.items[0].consumerIds, []);
+  });
+
   test('ถ้ายอดที่พาร์สรายการได้ไม่ตรงกับ subtotal ที่พิมพ์ไว้ในใบเสร็จ ต้องเพิ่มรายการให้และแจ้งเตือนผ่าน toast', async () => {
     setupDom();
     await bootApp();

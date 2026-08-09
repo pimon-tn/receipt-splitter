@@ -106,6 +106,51 @@ describe('parseReceiptLines — แบ่งส่วนด้วยเส้น
   });
 });
 
+describe('parseReceiptLines — แบ่งส่วนด้วยบรรทัดว่าง', () => {
+  test('ตัดหัวใบเสร็จและยอดสรุปที่คั่นด้วยบรรทัดว่าง โดยยังเก็บหัวตารางรายการไว้', () => {
+    const text = [
+      'ร้านอาหารทดสอบ',
+      'เลขที่ 0142',
+      '',
+      'รายการ         จำนวน    ราคา',
+      'ต้มยำกุ้ง        1        180.00',
+      'ข้าวผัดกุ้ง       2        60.00',
+      '',
+      'Subtotal 300.00',
+      'VAT 21.00',
+      'Total 321.00',
+      '',
+      'ขอบคุณค่ะ',
+    ].join('\n');
+
+    const { items, footerTotals } = parseReceiptLines(text);
+    assert.deepEqual(items, [
+      { name: 'ต้มยำกุ้ง', qty: 1, price: 180 },
+      { name: 'ข้าวผัดกุ้ง', qty: 2, price: 60 },
+    ]);
+    assert.equal(footerTotals.subtotal, 300);
+    assert.equal(footerTotals.total, 321);
+  });
+
+  test('ไม่ทิ้งรายการเมื่อ OCR เว้นบรรทัดว่างระหว่างเมนู', () => {
+    const text = [
+      'ร้านกาแฟ',
+      '',
+      'กาแฟเย็น 65.00',
+      '',
+      'ชาเขียว 55.00',
+      '',
+      'Total 120.00',
+    ].join('\n');
+
+    const { items } = parseReceiptLines(text);
+    assert.deepEqual(items, [
+      { name: 'กาแฟเย็น', qty: 1, price: 65 },
+      { name: 'ชาเขียว', qty: 1, price: 55 },
+    ]);
+  });
+});
+
 describe('parseReceiptLines — ยึดหัวตารางเมื่อมี (column-aware parsing)', () => {
   test('มีหัวตาราง "รายการ / จำนวน / ราคา" ต้องยึดคอลัมน์ตามหัวตาราง แม่นยำกว่าการเดา', () => {
     const text = [

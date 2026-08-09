@@ -30,46 +30,13 @@ export function showToast(message) {
   toastTimer = setTimeout(() => { el.hidden = true; }, 2200);
 }
 
-/* ---------------- Categories (chips) ---------------- */
-
-export function renderCategories(bill, handlers) {
-  const wrap = $('#categoryChips');
-  wrap.innerHTML = '';
-  bill.categories.forEach((cat) => {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.innerHTML = `<span>${escapeHtml(cat.name)}</span>`;
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.textContent = '×';
-    delBtn.setAttribute('aria-label', `ลบหมวดหมู่ ${cat.name}`);
-    delBtn.addEventListener('click', () => handlers.onRemoveCategory(cat.id));
-    chip.appendChild(delBtn);
-    wrap.appendChild(chip);
-  });
-
-  // อัปเดต dropdown หมวดหมู่ในตารางรายการทุกแถวด้วย
-  refreshCategoryOptions(bill);
-}
-
-function refreshCategoryOptions(bill) {
-  $all('#itemsBody select.item-category').forEach((select) => {
-    const currentValue = select.value;
-    select.innerHTML = bill.categories
-      .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
-      .join('');
-    if (bill.categories.some((c) => c.id === currentValue)) {
-      select.value = currentValue;
-    }
-  });
-}
-
 /* ---------------- Items: card list ---------------- */
 
 export function renderItems(bill, handlers) {
   const body = $('#itemsBody');
   body.innerHTML = '';
   $('#itemsEmptyHint').hidden = bill.items.length > 0;
+  $('#itemsCount').textContent = `${bill.items.length} รายการ`;
 
   bill.items.forEach((item) => {
     const card = document.createElement('div');
@@ -81,7 +48,7 @@ export function renderItems(bill, handlers) {
     card.innerHTML = `
       <div class="item-card__row1">
         <input type="text" class="item-name" value="${escapeHtml(item.name)}" placeholder="ชื่อรายการ เช่น ต้มยำกุ้ง">
-        <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}">🗑</button>
+        <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}">×</button>
       </div>
       <div class="item-card__row2">
         <div class="qty-stepper">
@@ -90,19 +57,13 @@ export function renderItems(bill, handlers) {
           <button type="button" class="qty-btn qty-btn--plus" aria-label="เพิ่มจำนวน">+</button>
         </div>
         <label class="price-field"><span>฿</span><input type="number" class="item-price" min="0" step="0.01" value="${item.price}" aria-label="ราคาต่อหน่วย"></label>
-        <select class="item-category" aria-label="หมวดหมู่">
-          ${bill.categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
-        </select>
+        <span class="item-line-total" aria-label="ยอดรวมรายการ">฿${formatMoney(lineTotal)}</span>
       </div>
-      <div class="item-card__row3">รวม <span class="item-line-total">฿${formatMoney(lineTotal)}</span></div>
     `;
-
-    $('.item-category', card).value = item.categoryId || bill.categories[0]?.id || '';
 
     $('.item-name', card).addEventListener('input', (e) => handlers.onUpdateItem(item.id, { name: e.target.value }));
     $('.item-qty', card).addEventListener('input', (e) => handlers.onUpdateItem(item.id, { qty: clampNumber(e.target.value, 1) }));
     $('.item-price', card).addEventListener('input', (e) => handlers.onUpdateItem(item.id, { price: clampNumber(e.target.value, 0) }));
-    $('.item-category', card).addEventListener('change', (e) => handlers.onUpdateItem(item.id, { categoryId: e.target.value }));
     $('.row-del', card).addEventListener('click', () => handlers.onRemoveItem(item.id));
     $('.qty-btn--minus', card).addEventListener('click', () => handlers.onUpdateItem(item.id, { qty: Math.max(1, item.qty - 1) }));
     $('.qty-btn--plus', card).addEventListener('click', () => handlers.onUpdateItem(item.id, { qty: item.qty + 1 }));
@@ -148,6 +109,7 @@ export function renderPeople(bill, handlers) {
   const list = $('#peopleList');
   list.innerHTML = '';
   $('#peopleEmptyHint').hidden = bill.people.length > 0;
+  $('#clearPeopleBtn').hidden = bill.people.length === 0;
 
   bill.people.forEach((person) => {
     const li = document.createElement('li');
@@ -265,16 +227,12 @@ export function openItemModal(bill) {
   const nameInput = $('#modalItemName');
   const qtyInput = $('#modalItemQty');
   const priceInput = $('#modalItemPrice');
-  const categorySelect = $('#modalItemCategory');
 
   nameInput.value = '';
   nameInput.removeAttribute('aria-invalid');
   qtyInput.value = '1';
   priceInput.value = '';
   priceInput.removeAttribute('aria-invalid');
-  categorySelect.innerHTML = bill.categories
-    .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
-    .join('');
 
   overlay.hidden = false;
   nameInput.focus();

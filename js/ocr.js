@@ -31,7 +31,8 @@ export async function recognizeReceiptText(imageFile, onProgress) {
 //   [หัวร้าน: ชื่อร้าน/วันเวลา/โต๊ะ] -> (เส้นคั่น ----/====/....) ->
 //   [รายการอาหาร: จำนวน/ชื่อเมนู/ราคา] -> (เส้นคั่น) ->
 //   [สรุปยอด: subtotal/ส่วนลด/ค่าบริการ/VAT/ยอดรวม]
-// ถ้ามีเส้นคั่นจะใช้ตัดส่วนตามนั้น ถ้าไม่มีจะใช้คำสำคัญกรองบรรทัดที่ไม่ใช่รายการออกแทน
+// ถ้ามีเส้นคั่นจะใช้ตัดส่วนตามนั้น ถ้าไม่มีจะใช้บรรทัดว่างช่วยตัดหัว/ท้ายบิล
+// แล้วจึงใช้คำสำคัญกรองบรรทัดที่ไม่ใช่รายการออกอีกชั้นหนึ่ง
 // ---------------------------------------------------------------------------
 
 // ตัวเลขราคาท้ายบรรทัด/ท้ายข้อความ: รองรับ 120, 120.00, 1,200.00
@@ -88,6 +89,11 @@ function matchFooterPattern(line) {
 
 function isNonItemLine(line) {
   return isSkipLine(line) || matchFooterPattern(line) !== null;
+}
+
+/** บรรทัดที่มีลักษณะเป็นรายการอาหาร: ไม่ใช่หัว/ท้ายบิล และมีราคาที่อ่านได้ท้ายบรรทัด */
+function isPotentialItemLine(line) {
+  return Boolean(line) && !isDividerLine(line) && !isNonItemLine(line) && extractTrailingAmount(line) !== null;
 }
 
 /** ดึงตัวเลขท้ายบรรทัดออกมาเป็นตัวเลข คืนค่า null ถ้าไม่เจอหรือดูไม่สมเหตุสมผล (<=0 หรือเกิน max) */
@@ -167,7 +173,7 @@ function findBodyRange(lines) {
   const dividerIdx = [];
   lines.forEach((l, i) => { if (isDividerLine(l)) dividerIdx.push(i); });
 
-  if (dividerIdx.length === 0) return { start: 0, end: lines.length };
+  if (dividerIdx.length === 0) return findBodyRangeFromBlankLines(lines);
 
   if (dividerIdx.length === 1) {
     const d = dividerIdx[0];
@@ -183,6 +189,44 @@ function findBodyRange(lines) {
   const first = dividerIdx[0];
   const last = dividerIdx[dividerIdx.length - 1];
   return { start: first + 1, end: last };
+}
+
+/**
+ * เมื่อไม่มีเส้นคั่น ใช้บรรทัดว่างช่วยระบุขอบเขตรายการอาหาร:
+ * - หาแถวแรก/สุดท้ายที่ดูเป็นรายการจากราคาท้ายบรรทัด
+ * - ตัดทุกอย่างก่อนบรรทัดว่างที่อยู่ก่อนรายการแรก (มักเป็นชื่อร้าน/เลขโต๊ะ)
+ * - ตัดทุกอย่างหลังบรรทัดว่างที่อยู่หลังรายการสุดท้าย (มักเป็นยอดสรุป/คำขอบคุณ)
+ *
+ * บรรทัดว่างระหว่างเมนูไม่ทำให้เมนูหาย เพราะใช้รายการแรกและรายการสุดท้ายเป็นขอบเขต
+ */
+function findBodyRangeFromBlankLines(lines) {
+  const itemIndexes = [];
+  lines.forEach((line, index) => {
+    if (isPotentialItemLine(line)) itemIndexes.push(index);
+  });
+
+  if (itemIndexes.length === 0) return { start: 0, end: lines.length };
+
+  const firstItem = itemIndexes[0];
+  const lastItem = itemIndexes[itemIndexes.length - 1];
+  let start = 0;
+  let end = lines.length;
+
+  for (let i = firstItem - 1; i >= 0; i--) {
+    if (!lines[i]) {
+      start = i + 1;
+      break;
+    }
+  }
+
+  for (let i = lastItem + 1; i < lines.length; i++) {
+    if (!lines[i]) {
+      end = i;
+      break;
+    }
+  }
+
+  return { start, end };
 }
 
 /** สแกนทุกบรรทัดของใบเสร็จ หายอดสรุปท้ายบิล (subtotal / ส่วนลด / ค่าบริการ / VAT / ยอดรวม) */
@@ -284,7 +328,7 @@ function parseItemFromFreeText(line) {
  *
  * ขั้นตอน:
  * 1. หาเส้นคั่นส่วน (----/====/....) ถ้ามี ใช้ตัดหา "ส่วนรายการอาหาร" (body) ออกจากหัวร้าน/ท้ายบิล
- *    ถ้าไม่มีเส้นคั่นเลย จะใช้ทั้งข้อความ แล้วกรองด้วยคำสำคัญ (skip words / รูปแบบสรุปยอด) แทน
+ *    ถ้าไม่มีเส้นคั่น จะใช้บรรทัดว่างก่อน/หลังรายการที่มีราคาเป็นขอบเขต แล้วกรองด้วยคำสำคัญอีกชั้นหนึ่ง
  * 2. ในส่วนรายการอาหาร ถ้าเจอบรรทัด "หัวตาราง" (เช่น "รายการ จำนวน ราคา") จะยึดคอลัมน์ตามหัวตารางนั้น
  *    ถ้าไม่เจอหัวตาราง จะเดาจากรูปแบบ "ชื่อ ... ราคา" ท้ายบรรทัดแบบเดิม (ใกล้เคียงที่สุดที่ทำได้)
  * 3. สแกนทุกบรรทัดหายอดสรุป (subtotal/ส่วนลด/ค่าบริการ/VAT/ยอดรวม) แล้วเทียบกับยอดรวมที่พาร์สรายการได้
@@ -294,13 +338,12 @@ function parseItemFromFreeText(line) {
 export function parseReceiptLines(rawText) {
   const lines = (rawText || '')
     .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
+    .map((l) => l.trim());
 
   const footerTotals = extractFooterTotals(lines);
 
   const { start, end } = findBodyRange(lines);
-  const bodyLines = lines.slice(start, end).filter((l) => !isDividerLine(l));
+  const bodyLines = lines.slice(start, end).filter((l) => l && !isDividerLine(l));
 
   const headerInfo = detectHeaderRow(bodyLines);
   const dataLines = headerInfo

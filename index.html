@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>หารบิล — ตัวช่วยหารค่าอาหาร</title>
 <meta name="description" content="สแกนใบเสร็จ แล้วหารค่าใช้จ่ายกับเพื่อนได้ทันที ไม่ต้องมีเซิร์ฟเวอร์">
-<meta name="theme-color" content="#FB8A3C">
+<meta name="theme-color" content="#3E3A38">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -32,16 +32,16 @@
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="เมนูหลัก">
     <button class="tab" data-tab="scan" role="tab" aria-selected="true">
-      <span class="tab__icon" aria-hidden="true">🚀</span><span class="tab__label">เริ่มต้น</span>
+      <span class="tab__icon" aria-hidden="true">📷</span><span class="tab__label">สแกน</span>
     </button>
     <button class="tab" data-tab="items" role="tab" aria-selected="false">
-      <span class="tab__icon" aria-hidden="true">🧾</span><span class="tab__label">รายการ</span>
+      <span class="tab__icon" aria-hidden="true">🍽️</span><span class="tab__label">รายการ</span>
     </button>
     <button class="tab" data-tab="people" role="tab" aria-selected="false">
       <span class="tab__icon" aria-hidden="true">👥</span><span class="tab__label">คนกิน</span>
     </button>
     <button class="tab" data-tab="split" role="tab" aria-selected="false">
-      <span class="tab__icon" aria-hidden="true">🤝</span><span class="tab__label">หารบิล</span>
+      <span class="tab__icon" aria-hidden="true">🧮</span><span class="tab__label">หารบิล</span>
     </button>
   </nav>
 
@@ -80,7 +80,7 @@
             <p class="start-option__desc">ไม่มีใบเสร็จก็เริ่มได้ พิมพ์รายการด้วยตัวเอง</p>
           </div>
         </div>
-        <button class="btn btn--primary btn--big" id="manualStartBtn" type="button">✍️ เริ่มกรอกรายการเอง →</button>
+        <button class="btn btn--primary btn--big" id="manualStartBtn" type="button">📝 เริ่มกรอกรายการเอง →</button>
       </div>
     </div>
 
@@ -93,7 +93,7 @@
     <div id="ocrRawWrap" class="ocr-raw" hidden>
       <p class="field-label">ข้อความที่อ่านได้ (แก้ไขได้ก่อนแปลงเป็นรายการ)</p>
       <textarea id="ocrRawText" rows="8" spellcheck="false"></textarea>
-      <button class="btn btn--primary btn--big" id="parseBtn" type="button">แปลงเป็นรายการ →</button>
+      <button class="btn btn--primary btn--big" id="parseBtn" type="button">✨ แปลงเป็นรายการ →</button>
     </div>
   </section>
 
@@ -101,16 +101,8 @@
   <section class="panel" data-panel="items" id="panel-items" hidden>
 
     <div class="section-row">
-      <p class="field-label">🏷️ หมวดหมู่</p>
-      <button class="btn btn--tiny" id="addCategoryBtn" type="button">+ เพิ่มหมวดหมู่</button>
-    </div>
-    <div class="chips" id="categoryChips"></div>
-
-    <div class="divider" aria-hidden="true"></div>
-
-    <div class="section-row">
-      <p class="field-label">🍽️ รายการอาหาร</p>
-      <button class="btn btn--tiny" id="addItemBtn" type="button">+ เพิ่มรายการ</button>
+      <p class="field-label">🍽️ รายการอาหาร <span class="items-count" id="itemsCount">0 รายการ</span></p>
+      <button class="btn btn--tiny" id="addItemBtn" type="button">＋ เพิ่มรายการ</button>
     </div>
 
     <div class="items-list" id="itemsBody"></div>
@@ -172,7 +164,10 @@
   <section class="panel" data-panel="people" id="panel-people" hidden>
     <div class="section-row">
       <p class="field-label">👥 คนที่ร่วมกินบิลนี้</p>
-      <button class="btn btn--tiny" id="addPersonBtn" type="button">+ เพิ่มคน</button>
+      <div class="section-actions">
+        <button class="btn btn--ghost btn--tiny" id="clearPeopleBtn" type="button" hidden>ล้างรายชื่อ</button>
+        <button class="btn btn--tiny" id="addPersonBtn" type="button">＋ เพิ่มคน</button>
+      </div>
     </div>
     <ul class="people-list" id="peopleList"></ul>
     <div class="empty-hint" id="peopleEmptyHint" hidden>
@@ -232,11 +227,6 @@
         <input type="number" id="modalItemPrice" min="0" step="0.01" value="" required>
       </label>
     </div>
-
-    <label class="modal__field">
-      <span>หมวดหมู่</span>
-      <select id="modalItemCategory"></select>
-    </label>
 
     <div class="modal__actions">
       <button class="btn btn--ghost" id="modalCancelBtn" type="button">ยกเลิก</button>

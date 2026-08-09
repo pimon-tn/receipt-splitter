@@ -19,7 +19,6 @@ function persist() {
 }
 
 function renderAll() {
-  ui.renderCategories(bill, categoryHandlers);
   ui.renderItems(bill, itemHandlers);
   ui.renderChargeSettings(bill);
   ui.renderTotals(bill);
@@ -27,26 +26,6 @@ function renderAll() {
   ui.renderAssignList(bill, assignHandlers);
   ui.renderSplit(bill, splitMode);
 }
-
-/* ============ Category handlers ============ */
-
-const categoryHandlers = {
-  onRemoveCategory(id) {
-    bill.categories = bill.categories.filter((c) => c.id !== id);
-    // รายการที่ใช้หมวดหมู่นี้อยู่ ให้ล้างเป็นไม่มีหมวดหมู่
-    bill.items.forEach((it) => { if (it.categoryId === id) it.categoryId = bill.categories[0]?.id || null; });
-    persist();
-    renderAll();
-  },
-};
-
-$('#addCategoryBtn').addEventListener('click', () => {
-  const name = prompt('ชื่อหมวดหมู่ใหม่:');
-  if (!name || !name.trim()) return;
-  bill.categories.push({ id: cryptoId(), name: name.trim() });
-  persist();
-  renderAll();
-});
 
 /* ============ Item handlers ============ */
 
@@ -127,9 +106,8 @@ function submitItemModal() {
   }
 
   const qty = Math.max(1, parseInt($('#modalItemQty').value, 10) || 1);
-  const categoryId = $('#modalItemCategory').value || bill.categories[0]?.id || null;
 
-  bill.items.push({ id: cryptoId(), name, qty, price, categoryId, consumerIds: [] });
+  bill.items.push({ id: cryptoId(), name, qty, price, categoryId: null, consumerIds: [] });
   ui.closeItemModal();
   persist();
   renderAll();
@@ -207,6 +185,16 @@ $('#addPersonBtn').addEventListener('click', () => {
   bill.people.push({ id: cryptoId(), name: `คนที่ ${bill.people.length + 1}` });
   persist();
   renderAll();
+});
+
+$('#clearPeopleBtn').addEventListener('click', () => {
+  if (!bill.people.length) return;
+  if (!confirm('ล้างรายชื่อคนกินทั้งหมดใช่หรือไม่?')) return;
+  bill.people = [];
+  bill.items.forEach((item) => { item.consumerIds = []; });
+  persist();
+  renderAll();
+  ui.showToast('ล้างรายชื่อทั้งหมดแล้ว');
 });
 
 /* ============ Assign (itemized) handlers ============ */
@@ -317,14 +305,13 @@ $('#parseBtn').addEventListener('click', () => {
     return;
   }
 
-  const defaultCategoryId = bill.categories[0]?.id || null;
   parsedItems.forEach((p) => {
     bill.items.push({
       id: cryptoId(),
       name: p.name,
       qty: p.qty,
       price: p.price,
-      categoryId: defaultCategoryId,
+      categoryId: null,
       consumerIds: [],
     });
   });
