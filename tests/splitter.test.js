@@ -4,7 +4,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { calcBillTotals, splitEqual, splitItemized, formatMoney } from '../js/splitter.js';
+import { calcBillTotals, splitEqual, splitItemized, getConsumptionSummary, formatMoney } from '../js/splitter.js';
 
 // ค่าเริ่มต้นของ settings แบบไม่มี VAT ไม่มีค่าบริการ (baseline)
 const noCharges = { vatEnabled: false, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: false, servicePercent: 10 };
@@ -122,6 +122,33 @@ describe('splitItemized', () => {
   test('ไม่มีรายการอาหารเลย (items ว่าง) ต้องได้ยอด 0 ทุกคนโดยไม่พัง', () => {
     const result = splitItemized([], samplePeople(), noCharges);
     result.perPerson.forEach((p) => assert.equal(p.amount, 0));
+  });
+});
+
+describe('getConsumptionSummary', () => {
+  test('รายการที่ระบุคนกินไว้ ต้องปรากฏเฉพาะในสรุปของคนที่ถูกระบุเท่านั้น', () => {
+    const items = sampleItems(); // i1 -> [p1,p2], i2 -> [p1]
+    const people = samplePeople(); // p1,p2,p3
+    const summary = getConsumptionSummary(items, people);
+
+    assert.deepEqual(summary.get('p1').map((i) => i.name), ['ต้มยำกุ้ง', 'ข้าวผัดกุ้ง']);
+    assert.deepEqual(summary.get('p2').map((i) => i.name), ['ต้มยำกุ้ง']);
+    assert.deepEqual(summary.get('p3'), [], 'p3 ไม่ได้ถูกระบุว่ากินอะไรเลย ควรได้ list ว่าง');
+  });
+
+  test('รายการที่ไม่ได้ระบุคนกิน (consumerIds ว่าง) ต้องนับว่าทุกคนกินร่วมกัน', () => {
+    const items = [{ id: 'i1', name: 'น้ำเปล่า', qty: 2, price: 10, consumerIds: [] }];
+    const people = samplePeople();
+    const summary = getConsumptionSummary(items, people);
+    people.forEach((p) => {
+      assert.equal(summary.get(p.id).length, 1);
+      assert.equal(summary.get(p.id)[0].name, 'น้ำเปล่า');
+    });
+  });
+
+  test('ไม่มีรายการอาหารเลย ต้องได้ list ว่างสำหรับทุกคนโดยไม่ throw', () => {
+    const summary = getConsumptionSummary([], samplePeople());
+    samplePeople().forEach((p) => assert.deepEqual(summary.get(p.id), []));
   });
 });
 

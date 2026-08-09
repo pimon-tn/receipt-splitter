@@ -2,7 +2,7 @@
 // หน้าที่เดียว: วาดสถานะ (state) ลงบน DOM
 // ฟังก์ชันในไฟล์นี้ไม่แก้ไข state เอง มีแต่ "อ่านแล้ววาด"
 
-import { calcBillTotals, splitEqual, splitItemized, formatMoney } from './splitter.js';
+import { calcBillTotals, splitEqual, splitItemized, getConsumptionSummary, formatMoney } from './splitter.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $all = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -183,10 +183,24 @@ export function renderAssignList(bill, handlers) {
       <div class="assign-people"></div>
     `;
     const tagWrap = $('.assign-people', card);
+    const consumerIds = item.consumerIds || [];
+    const allSelected = bill.people.length > 0 && bill.people.every((p) => consumerIds.includes(p.id));
+
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = 'assign-tag assign-tag--all' + (allSelected ? ' is-selected' : '');
+    allBtn.innerHTML = `<span>✅ ทุกคน</span>`;
+    allBtn.addEventListener('click', () => handlers.onSelectAllConsumers(item.id));
+    tagWrap.appendChild(allBtn);
+
+    const sep = document.createElement('span');
+    sep.className = 'assign-people__sep';
+    tagWrap.appendChild(sep);
+
     bill.people.forEach((person) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'assign-tag' + (item.consumerIds?.includes(person.id) ? ' is-selected' : '');
+      btn.className = 'assign-tag' + (consumerIds.includes(person.id) ? ' is-selected' : '');
       btn.innerHTML = `<span class="avatar">${getInitial(person.name)}</span><span>${escapeHtml(person.name || 'ไม่มีชื่อ')}</span>`;
       btn.addEventListener('click', () => handlers.onToggleConsumer(item.id, person.id));
       tagWrap.appendChild(btn);
@@ -215,17 +229,26 @@ export function renderSplit(bill, mode) {
     ? splitItemized(bill.items, bill.people, bill.settings)
     : splitEqual(bill.items, bill.people, bill.settings);
 
+  const consumption = getConsumptionSummary(bill.items, bill.people);
+
   result.perPerson.forEach((p) => {
     const card = document.createElement('div');
     card.className = 'split-card';
     const sub = mode === 'itemized'
       ? `<span class="split-card__sub">ค่าอาหาร ฿${formatMoney(p.subtotal)} + ส่วนแบ่งค่าบริการ/ภาษี</span>`
       : `<span class="split-card__sub">หารเท่ากันทุกคน</span>`;
+
+    const items = consumption.get(p.personId) || [];
+    const itemsHtml = items.length
+      ? `<div class="split-card__items">${items.map((it) => `<span class="split-card__item-chip">${escapeHtml(it.name)}${it.qty > 1 ? ` ×${it.qty}` : ''}</span>`).join('')}</div>`
+      : `<div class="split-card__items"><span class="split-card__item-chip">ไม่ได้กินอะไรเลย</span></div>`;
+
     card.innerHTML = `
       <span class="avatar avatar--lg">${getInitial(p.name)}</span>
       <div class="split-card__info">
         <div class="split-card__name">${escapeHtml(p.name || 'ไม่มีชื่อ')}</div>
         ${sub}
+        ${itemsHtml}
       </div>
       <div class="split-card__amount">฿${formatMoney(p.amount)}</div>
     `;
@@ -233,6 +256,34 @@ export function renderSplit(bill, mode) {
   });
 
   $('#stampNote').hidden = false;
+}
+
+/* ---------------- Add-item modal ---------------- */
+
+export function openItemModal(bill) {
+  const overlay = $('#itemModalOverlay');
+  const nameInput = $('#modalItemName');
+  const qtyInput = $('#modalItemQty');
+  const priceInput = $('#modalItemPrice');
+  const categorySelect = $('#modalItemCategory');
+
+  nameInput.value = '';
+  qtyInput.value = '1';
+  priceInput.value = '';
+  categorySelect.innerHTML = bill.categories
+    .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
+    .join('');
+
+  overlay.hidden = false;
+  nameInput.focus();
+}
+
+export function closeItemModal() {
+  $('#itemModalOverlay').hidden = true;
+}
+
+export function isItemModalOpen() {
+  return !$('#itemModalOverlay').hidden;
 }
 
 /* ---------------- Helpers ---------------- */

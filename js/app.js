@@ -2,8 +2,9 @@
 // เก็บ state ของบิลไว้ในหน่วยความจำ + sync ลง localStorage ทุกครั้งที่เปลี่ยน
 // ผูก event ของ DOM แล้วเรียก ui.js ให้วาดผลลัพธ์ใหม่
 
-import { loadBill, saveBill, clearBill, createEmptyBill, cryptoId } from './storage.js';
+import { loadBill, saveBill, createEmptyBill, cryptoId } from './storage.js';
 import { recognizeReceiptText, parseReceiptLines } from './ocr.js';
+import { formatMoney } from './splitter.js';
 import * as ui from './ui.js';
 
 let bill = loadBill();
@@ -81,34 +82,50 @@ function updateRowSum(id) {
 }
 
 $('#addItemBtn').addEventListener('click', () => {
-  bill.items.push({
-    id: cryptoId(),
-    name: '',
-    qty: 1,
-    price: 0,
-    categoryId: bill.categories[0]?.id || null,
-    consumerIds: [],
-  });
-  persist();
-  renderAll();
+  ui.openItemModal(bill);
 });
 
 /* ============ เริ่มบิลด้วยตัวเอง (ไม่ต้องสแกน) ============ */
 
 $('#manualStartBtn').addEventListener('click', () => {
-  if (bill.items.length === 0) {
-    bill.items.push({
-      id: cryptoId(),
-      name: '',
-      qty: 1,
-      price: 0,
-      categoryId: bill.categories[0]?.id || null,
-      consumerIds: [],
-    });
-    persist();
-    renderAll();
-  }
   ui.switchTab('items');
+  ui.openItemModal(bill);
+});
+
+/* ============ Popup เพิ่มรายการอาหาร ============ */
+
+$('#modalCancelBtn').addEventListener('click', () => ui.closeItemModal());
+
+$('#itemModalOverlay').addEventListener('click', (e) => {
+  if (e.target === $('#itemModalOverlay')) ui.closeItemModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ui.isItemModalOpen()) ui.closeItemModal();
+});
+
+function submitItemModal() {
+  const name = $('#modalItemName').value.trim() || 'รายการใหม่';
+  const qty = Math.max(1, parseInt($('#modalItemQty').value, 10) || 1);
+  const price = Math.max(0, parseFloat($('#modalItemPrice').value) || 0);
+  const categoryId = $('#modalItemCategory').value || bill.categories[0]?.id || null;
+
+  bill.items.push({ id: cryptoId(), name, qty, price, categoryId, consumerIds: [] });
+  persist();
+  renderAll();
+  ui.closeItemModal();
+  ui.showToast(`เพิ่ม "${name}" แล้ว`);
+}
+
+$('#modalSubmitBtn').addEventListener('click', submitItemModal);
+
+['modalItemName', 'modalItemQty', 'modalItemPrice'].forEach((id) => {
+  $(`#${id}`).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitItemModal();
+    }
+  });
 });
 
 $('#vatEnabledInput').addEventListener('change', (e) => {
@@ -184,6 +201,13 @@ const assignHandlers = {
     persist();
     ui.renderAssignList(bill, assignHandlers);
   },
+  onSelectAllConsumers(itemId) {
+    const item = bill.items.find((it) => it.id === itemId);
+    if (!item) return;
+    item.consumerIds = bill.people.map((p) => p.id);
+    persist();
+    ui.renderAssignList(bill, assignHandlers);
+  },
 };
 
 /* ============ Split mode ============ */
@@ -208,12 +232,13 @@ document.querySelectorAll('.tab').forEach((btn) => {
 /* ============ New bill ============ */
 
 $('#newBillBtn').addEventListener('click', () => {
-  if (!confirm('ล้างข้อมูลบิลปัจจุบันทั้งหมดและเริ่มใหม่?')) return;
-  clearBill();
+  if (!confirm('ล้างข้อมูลบิลปัจจุบันทั้งหมด (ยกเว้นรายชื่อคน) และเริ่มใหม่?')) return;
+  const keptPeople = bill.people;
   bill = createEmptyBill();
+  bill.people = keptPeople;
   persist();
   renderAll();
-  ui.showToast('เริ่มบิลใหม่แล้ว');
+  ui.showToast('เริ่มบิลใหม่แล้ว (เก็บรายชื่อคนไว้เหมือนเดิม)');
 });
 
 /* ============ Scan / OCR flow ============ */
@@ -263,7 +288,8 @@ $('#fileInput').addEventListener('change', (e) => handleImageSelected(e.target.f
 
 $('#parseBtn').addEventListener('click', () => {
   const rawText = $('#ocrRawText').value;
-  const parsedItems = parseReceiptLines(rawText);
+  const result = parseReceiptLines(rawText);
+  const parsedItems = result.items;
 
   if (parsedItems.length === 0) {
     ui.showToast('อ่านรายการไม่ได้ ลองแก้ไขข้อความ หรือเพิ่มรายการเองในแท็บ "รายการ"');
@@ -285,7 +311,16 @@ $('#parseBtn').addEventListener('click', () => {
   persist();
   renderAll();
   ui.switchTab('items');
-  ui.showToast(`เพิ่ม ${parsedItems.length} รายการจากใบเสร็จแล้ว กรุณาตรวจสอบความถูกต้อง`);
+
+  const r = result.reconciliation;
+  if (r.checked && !r.matches) {
+    // ยอดที่พาร์สรายการได้ไม่ตรงกับยอด subtotal/total ที่พิมพ์ไว้ในใบเสร็จ — เตือนให้ตรวจสอบ
+    ui.showToast(
+      `เพิ่ม ${parsedItems.length} รายการแล้ว แต่ยอดรวมที่อ่านได้ (฿${formatMoney(r.itemsSum)}) ไม่ตรงกับยอดในใบเสร็จ (฿${formatMoney(r.expected)}) กรุณาตรวจสอบรายการอีกครั้ง`
+    );
+  } else {
+    ui.showToast(`เพิ่ม ${parsedItems.length} รายการจากใบเสร็จแล้ว กรุณาตรวจสอบความถูกต้อง`);
+  }
 });
 
 /* ============ Service worker (PWA) ============ */

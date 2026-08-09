@@ -115,38 +115,16 @@ button, input, textarea, select{ font-family: inherit; }
   background: none;
   border: none;
   border-radius: var(--radius-sm);
-  padding: 8px 2px 7px;
+  padding: 10px 2px;
   color: var(--muted);
   cursor:pointer;
   font-family: var(--font-body);
 }
-.tab__num{
-  font-family: var(--font-display);
-  font-size: .62rem;
-  font-weight:700;
-  width: 16px;
-  height:16px;
-  border-radius:100%;
-  background: var(--cream-soft);
-  color: var(--muted);
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  position: absolute;
-  top: 2px;
-  left: 50%;
-  transform: translateX(6px);
-}
-.tab{ position: relative; }
-.tab__icon{ font-size: 1.15rem; line-height:1; margin-top:6px; }
+.tab__icon{ font-size: 1.2rem; line-height:1; }
 .tab__label{ font-size: .68rem; font-weight:600; }
 .tab[aria-selected="true"]{
   background: var(--orange);
   color: #fff;
-}
-.tab[aria-selected="true"] .tab__num{
-  background: rgba(255,255,255,.35);
-  color:#fff;
 }
 
 /* ---------- Panels ---------- */
@@ -666,6 +644,26 @@ button, input, textarea, select{ font-family: inherit; }
 }
 .assign-tag.is-selected .avatar{ background: rgba(255,255,255,.3); }
 
+.assign-tag--all{
+  border-style: dashed;
+  border-color: var(--orange-pale);
+  color: var(--orange-strong);
+  font-weight:700;
+  background: var(--cream-soft);
+}
+.assign-tag--all.is-selected{
+  border-style: solid;
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+}
+.assign-people__sep{
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  margin: 0 2px;
+}
+
 /* ---------- Split panel ---------- */
 .split-mode{ display:flex; gap:8px; margin-bottom: 16px; }
 .split-mode__btn{
@@ -687,14 +685,29 @@ button, input, textarea, select{ font-family: inherit; }
   border-radius: var(--radius-md);
   padding: 12px 14px;
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   gap: 12px;
   background: var(--white);
 }
+.split-card .avatar{ margin-top: 2px; }
 .split-card__info{ flex:1; min-width:0; }
 .split-card__name{ font-family: var(--font-display); font-size: .95rem; font-weight:700; }
 .split-card__sub{ display:block; font-size: .72rem; color: var(--muted); font-weight:500; margin-top:2px; }
-.split-card__amount{ font-family: var(--font-money); font-size: 1.15rem; font-weight:700; color: var(--orange-strong); white-space:nowrap; }
+.split-card__amount{ font-family: var(--font-money); font-size: 1.15rem; font-weight:700; color: var(--orange-strong); white-space:nowrap; margin-top: 2px; }
+.split-card__items{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.split-card__item-chip{
+  font-size: .68rem;
+  color: var(--orange-strong);
+  background: var(--cream-soft);
+  border-radius: 100px;
+  padding: 3px 9px;
+  font-weight:600;
+}
 
 .stamp-note{
   margin-top: 18px;
@@ -723,6 +736,65 @@ button, input, textarea, select{ font-family: inherit; }
   margin: 0;
   line-height:1.6;
 }
+
+/* ---------- Add-item modal ---------- */
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(64, 46, 34, .45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 20px;
+  z-index: 200;
+}
+.modal{
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: var(--shadow-lift);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal__title{
+  font-family: var(--font-display);
+  font-weight:700;
+  font-size: 1.05rem;
+  margin: 0 0 16px;
+  color: var(--ink);
+}
+.modal__field{
+  display:flex;
+  flex-direction:column;
+  gap: 5px;
+  margin-bottom: 14px;
+  font-size: .82rem;
+  font-weight:600;
+  color: var(--ink);
+}
+.modal__field input, .modal__field select{
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: .9rem;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: inherit;
+}
+.modal__field input:focus, .modal__field select:focus{
+  outline:none;
+  border-color: var(--orange);
+}
+.modal__row{ display:flex; gap: 10px; }
+.modal__field--small{ flex:1; min-width: 0; }
+.modal__actions{
+  display:flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.modal__actions .btn{ flex:1; }
 
 /* ---------- Toast ---------- */
 .toast{

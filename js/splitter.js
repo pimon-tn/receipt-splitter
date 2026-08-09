@@ -102,3 +102,23 @@ export function formatMoney(n) {
     maximumFractionDigits: 2,
   });
 }
+
+/**
+ * สรุปว่าแต่ละคนกินรายการอะไรบ้าง (ไม่เกี่ยวกับการคำนวณเงิน ใช้แสดงผลอย่างเดียว)
+ * ใช้กฎเดียวกับ splitItemized: ถ้ารายการไหนไม่ได้ระบุคนกิน (consumerIds ว่าง) ถือว่าทุกคนกินร่วมกัน
+ * คืนค่า Map<personId, Array<{name, qty}>>
+ */
+export function getConsumptionSummary(items, people) {
+  const map = new Map(people.map((p) => [p.id, []]));
+  for (const item of items) {
+    const consumers = item.consumerIds && item.consumerIds.length > 0
+      ? item.consumerIds
+      : people.map((p) => p.id);
+    for (const personId of consumers) {
+      if (map.has(personId)) {
+        map.get(personId).push({ name: item.name || 'ไม่มีชื่อ', qty: item.qty });
+      }
+    }
+  }
+  return map;
+}

@@ -28,6 +28,7 @@ function setupDom() {
   Object.defineProperty(global, 'navigator', { value: window.navigator, configurable: true });
   global.localStorage = window.localStorage;
   global.Event = window.Event;
+  global.KeyboardEvent = window.KeyboardEvent;
 
   // jsdom ไม่ implement prompt/confirm จริง (ของเบราว์เซอร์) — stub ไว้ให้ทดสอบได้
   window.prompt = () => null;
@@ -51,18 +52,35 @@ function setChecked(el, checked) {
   el.checked = checked;
   el.dispatchEvent(new global.window.Event('change', { bubbles: true }));
 }
+function pressEscape() {
+  global.document.dispatchEvent(new global.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+}
 
 /** import แอปตัวจริงแบบ "สด" ทุกครั้ง (ผ่าน query string กัน cache) เพื่อไม่ให้ state ค้างข้ามเทสต์ */
 async function bootApp() {
   await import(`../js/app.js?fresh=${Date.now()}-${Math.random()}`);
 }
 
-describe('การใช้งานจริงทั้งวงจร: สแกน → รายการ → คนกิน → ตั้งค่า VAT/ค่าบริการ → หารบิล', () => {
-  test('ผู้ใช้วางข้อความ OCR, เพิ่มรายการเอง, เพิ่มคน, เปิด VAT+ค่าบริการ แล้วดูผลหารบิลทั้ง 2 โหมด', async () => {
+/**
+ * เพิ่มรายการอาหารผ่าน popup จริง (กด "+ เพิ่มรายการ" -> กรอกฟอร์ม -> กด "+ เพิ่มรายการ" ใน popup)
+ * แทนการเซ็ตค่าลงการ์ดตรง ๆ เพราะตอนนี้การเพิ่มรายการใหม่ต้องผ่าน popup เท่านั้น
+ */
+function addItemViaModal({ name = '', qty = 1, price = 0 } = {}) {
+  click($('#addItemBtn'));
+  assert.equal($('#itemModalOverlay').hidden, false, 'popup เพิ่มรายการควรเปิดขึ้นมาหลังกด "+ เพิ่มรายการ"');
+  setValue($('#modalItemName'), name);
+  setValue($('#modalItemQty'), String(qty));
+  setValue($('#modalItemPrice'), String(price));
+  click($('#modalSubmitBtn'));
+  assert.equal($('#itemModalOverlay').hidden, true, 'popup ควรปิดตัวเองหลังกดเพิ่มรายการสำเร็จ');
+}
+
+describe('การใช้งานจริงทั้งวงจร: เริ่มต้น → รายการ → คนกิน → ตั้งค่า VAT/ค่าบริการ → หารบิล', () => {
+  test('ผู้ใช้วางข้อความ OCR, เพิ่มรายการผ่าน popup, เพิ่มคน, เปิด VAT+ค่าบริการ แล้วดูผลหารบิลทั้ง 2 โหมด', async () => {
     setupDom();
     await bootApp();
 
-    // ---- แท็บสแกน: วางข้อความที่ "อ่านได้" จากใบเสร็จ แล้วกดแปลงเป็นรายการ ----
+    // ---- แท็บเริ่มต้น: วางข้อความที่ "อ่านได้" จากใบเสร็จ แล้วกดแปลงเป็นรายการ ----
     setValue($('#ocrRawText'), 'ต้มยำกุ้ง 180.00\nข้าวผัดกุ้ง x2 60.00');
     click($('#parseBtn'));
 
@@ -71,12 +89,11 @@ describe('การใช้งานจริงทั้งวงจร: ส�
     assert.equal(itemCards[0].querySelector('.item-name').value, 'ต้มยำกุ้ง');
     assert.equal(itemCards[1].querySelector('.item-qty').value, '2');
 
-    // ---- แท็บรายการ: เพิ่มรายการเองอีก 1 รายการ ----
-    click($('#addItemBtn'));
+    // ---- แท็บรายการ: เพิ่มรายการเองอีก 1 รายการผ่าน popup ----
+    addItemViaModal({ name: 'น้ำเปล่า', qty: 1, price: 20 });
     itemCards = $$('#itemsBody .item-card');
     assert.equal(itemCards.length, 3);
-    setValue(itemCards[2].querySelector('.item-name'), 'น้ำเปล่า');
-    setValue(itemCards[2].querySelector('.item-price'), '20');
+    assert.equal(itemCards[2].querySelector('.item-name').value, 'น้ำเปล่า');
 
     // ---- แท็บคนกิน: เพิ่ม 2 คน ----
     click($('#addPersonBtn'));
@@ -116,7 +133,7 @@ describe('การใช้งานจริงทั้งวงจร: ส�
     // ---- ระบุว่า "เอ" กินต้มยำกุ้งคนเดียว (คนแรกในรายชื่อ x รายการแรก) ----
     click($('.tab[data-tab="people"]'));
     const firstAssignItem = $$('#assignList .assign-item')[0];
-    click(firstAssignItem.querySelectorAll('.assign-tag')[0]);
+    click(firstAssignItem.querySelectorAll('.assign-tag:not(.assign-tag--all)')[0]);
 
     click($('.tab[data-tab="split"]'));
     splitCards = $$('#splitResult .split-card');
@@ -137,9 +154,8 @@ describe('การใช้งานจริงทั้งวงจร: ส�
     setupDom();
     await bootApp();
 
-    click($('#addItemBtn'));
+    addItemViaModal({ name: 'อาหารทดสอบ', qty: 1, price: 100 });
     const card = $$('#itemsBody .item-card')[0];
-    setValue(card.querySelector('.item-price'), '100');
     click(card.querySelector('.qty-btn--plus')); // qty: 1 -> 2
 
     click($('#addPersonBtn'));
@@ -156,24 +172,31 @@ describe('การใช้งานจริงทั้งวงจร: ส�
     assert.deepEqual(amounts, ['฿100.00', '฿100.00']);
   });
 
-  test('กด "เริ่มบิลใหม่" ต้องล้างรายการ/คน/การตั้งค่ากลับเป็นค่าเริ่มต้นทั้งหมด', async () => {
+  test('กด "เริ่มบิลใหม่" ต้องล้างรายการ/หมวดหมู่/การตั้งค่ากลับเป็นค่าเริ่มต้น แต่ต้องเก็บรายชื่อคนไว้เหมือนเดิม', async () => {
     setupDom();
     await bootApp();
 
-    click($('#addItemBtn'));
+    addItemViaModal({ name: 'ต้มยำ', qty: 1, price: 180 });
     click($('#addPersonBtn'));
+    setValue($$('#peopleList li')[0].querySelector('.person-name'), 'เอ');
     setChecked($('#vatEnabledInput'), true);
+
     assert.equal($$('#itemsBody .item-card').length, 1);
     assert.equal($$('#peopleList li').length, 1);
 
     click($('#newBillBtn')); // window.confirm ถูก stub ให้คืนค่า true ไว้แล้วใน setupDom()
 
-    assert.equal($$('#itemsBody .item-card').length, 0);
-    assert.equal($$('#peopleList li').length, 0);
-    assert.equal($('#vatEnabledInput').checked, false);
+    assert.equal($$('#itemsBody .item-card').length, 0, 'รายการอาหารต้องถูกล้าง');
+    assert.equal($('#vatEnabledInput').checked, false, 'การตั้งค่า VAT ต้องรีเซ็ตกลับเป็นค่าเริ่มต้น');
+
+    const peopleRows = $$('#peopleList li');
+    assert.equal(peopleRows.length, 1, 'รายชื่อคนต้องยังอยู่เหมือนเดิม ไม่ถูกล้างไปด้วย');
+    assert.equal(peopleRows[0].querySelector('.person-name').value, 'เอ');
 
     const saved = JSON.parse(global.localStorage.getItem('receipt-splitter:bill'));
     assert.equal(saved.items.length, 0);
+    assert.equal(saved.people.length, 1);
+    assert.equal(saved.people[0].name, 'เอ');
     assert.equal(saved.settings.vatEnabled, false);
   });
 
@@ -181,17 +204,30 @@ describe('การใช้งานจริงทั้งวงจร: ส�
     setupDom();
     await bootApp();
 
-    click($('#addItemBtn'));
-    click($('#addItemBtn'));
+    addItemViaModal({ name: 'รายการ 1', qty: 1, price: 50 });
+    addItemViaModal({ name: 'รายการ 2', qty: 1, price: 75 });
+
     let cards = $$('#itemsBody .item-card');
-    setValue(cards[0].querySelector('.item-price'), '50');
-    setValue(cards[1].querySelector('.item-price'), '75');
     assert.equal($('#sumSubtotal').textContent, '125.00');
 
     click(cards[0].querySelector('.row-del'));
     cards = $$('#itemsBody .item-card');
     assert.equal(cards.length, 1);
     assert.equal($('#sumSubtotal').textContent, '75.00');
+  });
+
+  test('ถ้ายอดที่พาร์สรายการได้ไม่ตรงกับ subtotal ที่พิมพ์ไว้ในใบเสร็จ ต้องเพิ่มรายการให้และแจ้งเตือนผ่าน toast', async () => {
+    setupDom();
+    await bootApp();
+
+    // จำลอง OCR อ่านราคารายการที่ 2 ผิดพลาด (เช่น อ่านเลขเพี้ยน) ทำให้ยอดรวมไม่ตรงกับ Subtotal ที่พิมพ์ไว้จริง
+    setValue($('#ocrRawText'), 'ต้มยำกุ้ง 180.00\nข้าวผัดกุ้ง 60.00\nSubtotal 300.00');
+    click($('#parseBtn'));
+
+    const itemCards = $$('#itemsBody .item-card');
+    assert.equal(itemCards.length, 2, 'ยังต้องเพิ่มรายการที่อ่านได้ให้ก่อนเสมอ แม้ยอดจะไม่ตรงก็ตาม');
+    assert.equal($('#toast').hidden, false);
+    assert.match($('#toast').textContent, /ไม่ตรงกับยอดในใบเสร็จ/, 'ควรมี toast เตือนว่ายอดไม่ตรงกัน');
   });
 
   test('พิมพ์ข้อความ OCR ที่อ่านรายการไม่ได้เลย ต้องไม่เพิ่มรายการอะไรและไม่ล้ม (แสดง toast แจ้งเตือนแทน)', async () => {
@@ -205,7 +241,7 @@ describe('การใช้งานจริงทั้งวงจร: ส�
     assert.equal($('#toast').hidden, false, 'ควรแสดง toast แจ้งว่าอ่านรายการไม่ได้');
   });
 
-  test('เริ่มบิลใหม่ด้วยตัวเอง (ไม่สแกน) ต้องพาไปแท็บรายการพร้อมรายการเปล่าให้กรอกทันที', async () => {
+  test('เริ่มบิลใหม่ด้วยตัวเอง (ไม่สแกน) ต้องสลับไปแท็บรายการและเปิด popup เพิ่มรายการให้ทันที', async () => {
     setupDom();
     await bootApp();
 
@@ -216,34 +252,149 @@ describe('การใช้งานจริงทั้งวงจร: ส�
     assert.equal($('.tab[data-tab="items"]').getAttribute('aria-selected'), 'true');
     assert.equal($('#panel-items').hidden, false);
 
-    // ต้องมีรายการเปล่าเตรียมไว้ให้กรอกทันที ไม่ต้องกด "+ เพิ่มรายการ" อีกที
+    // ต้องเปิด popup เพิ่มรายการให้ทันที ไม่ต้องกด "+ เพิ่มรายการ" ซ้ำอีกที
+    assert.equal($('#itemModalOverlay').hidden, false, 'ควรเปิด popup เพิ่มรายการทันทีที่เริ่มกรอกเอง');
+
+    setValue($('#modalItemName'), 'ต้มยำกุ้ง');
+    setValue($('#modalItemPrice'), '180');
+    click($('#modalSubmitBtn'));
+
     const cards = $$('#itemsBody .item-card');
     assert.equal(cards.length, 1);
-    assert.equal(cards[0].querySelector('.item-name').value, '');
-
-    // กดซ้ำอีกครั้งไม่ควรเพิ่มรายการเปล่าซ้อนอีกใบ (เช็คว่าไม่ duplicate ถ้ามีรายการอยู่แล้ว)
-    click($('#manualStartBtn'));
-    assert.equal($$('#itemsBody .item-card').length, 1);
+    assert.equal(cards[0].querySelector('.item-name').value, 'ต้มยำกุ้ง');
   });
 
-  test('การใช้งานผ่านแท็บ "รายการ" ล้วน ๆ โดยไม่แตะแท็บสแกน/เริ่มต้นเลย ก็ต้องหารบิลได้ปกติ', async () => {
+  test('การใช้งานผ่านแท็บ "รายการ" ล้วน ๆ โดยไม่แตะแท็บเริ่มต้นเลย ก็ต้องหารบิลได้ปกติ', async () => {
     setupDom();
     await bootApp();
 
-    // ผู้ใช้ไปที่แท็บรายการตรง ๆ เพิ่มรายการเองทั้งหมด ไม่ผ่านการสแกนหรือปุ่มเริ่มต้นใด ๆ
     click($('.tab[data-tab="items"]'));
-    click($('#addItemBtn'));
-    click($('#addItemBtn'));
-    const cards = $$('#itemsBody .item-card');
-    setValue(cards[0].querySelector('.item-name'), 'กาแฟเย็น');
-    setValue(cards[0].querySelector('.item-price'), '65');
-    setValue(cards[1].querySelector('.item-name'), 'ชาเขียว');
-    setValue(cards[1].querySelector('.item-price'), '55');
+    addItemViaModal({ name: 'กาแฟเย็น', qty: 1, price: 65 });
+    addItemViaModal({ name: 'ชาเขียว', qty: 1, price: 55 });
 
     click($('#addPersonBtn'));
     click($('.tab[data-tab="split"]'));
 
     const amounts = $$('#splitResult .split-card').map((c) => c.querySelector('.split-card__amount').textContent);
     assert.deepEqual(amounts, ['฿120.00']);
+  });
+});
+
+describe('Popup เพิ่มรายการ: ยกเลิก / Escape / คลิกนอกกล่อง', () => {
+  test('กด "ยกเลิก" ต้องปิด popup โดยไม่เพิ่มรายการ', async () => {
+    setupDom();
+    await bootApp();
+
+    click($('#addItemBtn'));
+    setValue($('#modalItemName'), 'ไม่ควรถูกเพิ่ม');
+    click($('#modalCancelBtn'));
+
+    assert.equal($('#itemModalOverlay').hidden, true);
+    assert.equal($$('#itemsBody .item-card').length, 0);
+  });
+
+  test('กด Escape ต้องปิด popup โดยไม่เพิ่มรายการ', async () => {
+    setupDom();
+    await bootApp();
+
+    click($('#addItemBtn'));
+    assert.equal($('#itemModalOverlay').hidden, false);
+    pressEscape();
+
+    assert.equal($('#itemModalOverlay').hidden, true);
+    assert.equal($$('#itemsBody .item-card').length, 0);
+  });
+
+  test('คลิกพื้นหลังนอกกล่อง (overlay) ต้องปิด popup โดยไม่เพิ่มรายการ', async () => {
+    setupDom();
+    await bootApp();
+
+    click($('#addItemBtn'));
+    click($('#itemModalOverlay')); // คลิกที่ overlay เอง ไม่ใช่คลิกในกล่อง modal
+
+    assert.equal($('#itemModalOverlay').hidden, true);
+    assert.equal($$('#itemsBody .item-card').length, 0);
+  });
+});
+
+describe('"ใครกินอะไรบ้าง" — ปุ่มเลือกทั้งหมด (ทุกคน)', () => {
+  test('กดปุ่ม "ทุกคน" ต้องเลือกคนทุกคนเป็นคนกินรายการนั้นทีเดียว', async () => {
+    setupDom();
+    await bootApp();
+
+    addItemViaModal({ name: 'ต้มยำกุ้ง', qty: 1, price: 180 });
+    click($('#addPersonBtn'));
+    click($('#addPersonBtn'));
+    click($('#addPersonBtn'));
+
+    click($('.tab[data-tab="people"]'));
+    const allBtnBefore = $$('#assignList .assign-item')[0].querySelector('.assign-tag--all');
+    assert.ok(allBtnBefore, 'ต้องมีปุ่ม "ทุกคน" ในแต่ละรายการ');
+    assert.equal(allBtnBefore.classList.contains('is-selected'), false);
+
+    click(allBtnBefore);
+
+    // ต้อง re-query ใหม่เพราะ renderAssignList วาด DOM ใหม่ทั้งหมดหลังกด
+    const assignItemAfter = $$('#assignList .assign-item')[0];
+    const personTags = assignItemAfter.querySelectorAll('.assign-tag:not(.assign-tag--all)');
+    assert.equal(personTags.length, 3);
+    personTags.forEach((tag) => assert.equal(tag.classList.contains('is-selected'), true, 'ทุกคนต้องถูกเลือกหลังกดปุ่ม "ทุกคน"'));
+    assert.equal(assignItemAfter.querySelector('.assign-tag--all').classList.contains('is-selected'), true);
+  });
+
+  test('หลังกด "ทุกคน" แล้ว ยังสามารถแตะเอาคนใดคนหนึ่งออกได้ตามปกติ', async () => {
+    setupDom();
+    await bootApp();
+
+    addItemViaModal({ name: 'ข้าวผัด', qty: 1, price: 60 });
+    click($('#addPersonBtn'));
+    click($('#addPersonBtn'));
+
+    click($('.tab[data-tab="people"]'));
+    click($$('#assignList .assign-item')[0].querySelector('.assign-tag--all'));
+
+    let assignItem = $$('#assignList .assign-item')[0];
+    const firstPersonTag = assignItem.querySelectorAll('.assign-tag:not(.assign-tag--all)')[0];
+    click(firstPersonTag);
+
+    assignItem = $$('#assignList .assign-item')[0];
+    const personTags = assignItem.querySelectorAll('.assign-tag:not(.assign-tag--all)');
+    assert.equal(personTags[0].classList.contains('is-selected'), false, 'คนที่แตะออกต้องถูก deselect');
+    assert.equal(personTags[1].classList.contains('is-selected'), true, 'อีกคนต้องยังถูกเลือกอยู่');
+  });
+});
+
+describe('เมนูหารบิล: สรุปรายการที่แต่ละคนกิน', () => {
+  test('การ์ดสรุปผลของแต่ละคนต้องแสดงรายการอาหารที่คนนั้นกินด้วย', async () => {
+    setupDom();
+    await bootApp();
+
+    addItemViaModal({ name: 'ต้มยำกุ้ง', qty: 1, price: 180 });
+    addItemViaModal({ name: 'ข้าวผัดกุ้ง', qty: 1, price: 120 });
+    click($('#addPersonBtn'));
+    click($('#addPersonBtn'));
+
+    // ให้คนแรกกินแค่ต้มยำกุ้งคนเดียว (ข้าวผัดกุ้งไม่ระบุ = ทุกคนกินร่วมกัน)
+    click($('.tab[data-tab="people"]'));
+    click($$('#assignList .assign-item')[0].querySelectorAll('.assign-tag:not(.assign-tag--all)')[0]);
+
+    click($('.tab[data-tab="split"]'));
+    const splitCards = $$('#splitResult .split-card');
+    const firstPersonChips = Array.from(splitCards[0].querySelectorAll('.split-card__item-chip')).map((c) => c.textContent);
+    assert.ok(firstPersonChips.some((t) => t.includes('ต้มยำกุ้ง')), 'คนแรกควรเห็นในสรุปว่ากินต้มยำกุ้ง');
+    assert.ok(firstPersonChips.some((t) => t.includes('ข้าวผัดกุ้ง')), 'คนแรกควรเห็นข้าวผัดกุ้งด้วย (ไม่ระบุ = กินร่วมกันทุกคน)');
+
+    // สลับโหมดหารก็ต้องยังเห็นสรุปเดิม (ไม่เกี่ยวกับโหมดคำนวณเงิน)
+    click($('.split-mode__btn[data-mode="itemized"]'));
+    const firstPersonChipsItemized = Array.from($$('#splitResult .split-card')[0].querySelectorAll('.split-card__item-chip')).map((c) => c.textContent);
+    assert.ok(firstPersonChipsItemized.some((t) => t.includes('ต้มยำกุ้ง')));
+  });
+});
+
+describe('แท็บเมนู: ไม่มีตัวเลขลำดับกำกับ', () => {
+  test('ไอคอนแท็บต้องไม่มี badge เลขลำดับอีกต่อไป', async () => {
+    setupDom();
+    await bootApp();
+    assert.equal($$('.tab__num').length, 0);
   });
 });

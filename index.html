@@ -32,16 +32,16 @@
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="เมนูหลัก">
     <button class="tab" data-tab="scan" role="tab" aria-selected="true">
-      <span class="tab__num">1</span><span class="tab__icon" aria-hidden="true">🚀</span><span class="tab__label">เริ่มต้น</span>
+      <span class="tab__icon" aria-hidden="true">🚀</span><span class="tab__label">เริ่มต้น</span>
     </button>
     <button class="tab" data-tab="items" role="tab" aria-selected="false">
-      <span class="tab__num">2</span><span class="tab__icon" aria-hidden="true">🧾</span><span class="tab__label">รายการ</span>
+      <span class="tab__icon" aria-hidden="true">🧾</span><span class="tab__label">รายการ</span>
     </button>
     <button class="tab" data-tab="people" role="tab" aria-selected="false">
-      <span class="tab__num">3</span><span class="tab__icon" aria-hidden="true">👥</span><span class="tab__label">คนกิน</span>
+      <span class="tab__icon" aria-hidden="true">👥</span><span class="tab__label">คนกิน</span>
     </button>
     <button class="tab" data-tab="split" role="tab" aria-selected="false">
-      <span class="tab__num">4</span><span class="tab__icon" aria-hidden="true">🤝</span><span class="tab__label">หารบิล</span>
+      <span class="tab__icon" aria-hidden="true">🤝</span><span class="tab__label">หารบิล</span>
     </button>
   </nav>
 
@@ -209,6 +209,38 @@
 </div>
 
 <div id="toast" class="toast" hidden></div>
+
+<div id="itemModalOverlay" class="modal-overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+    <p class="modal__title" id="itemModalTitle">🍽️ เพิ่มรายการอาหาร</p>
+
+    <label class="modal__field">
+      <span>ชื่อรายการ</span>
+      <input type="text" id="modalItemName" placeholder="เช่น ต้มยำกุ้ง" autocomplete="off">
+    </label>
+
+    <div class="modal__row">
+      <label class="modal__field modal__field--small">
+        <span>จำนวน</span>
+        <input type="number" id="modalItemQty" min="1" step="1" value="1">
+      </label>
+      <label class="modal__field modal__field--small">
+        <span>ราคา/หน่วย (฿)</span>
+        <input type="number" id="modalItemPrice" min="0" step="0.01" value="">
+      </label>
+    </div>
+
+    <label class="modal__field">
+      <span>หมวดหมู่</span>
+      <select id="modalItemCategory"></select>
+    </label>
+
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="modalCancelBtn" type="button">ยกเลิก</button>
+      <button class="btn btn--primary" id="modalSubmitBtn" type="button">+ เพิ่มรายการ</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script type="module" src="js/app.js"></script>
