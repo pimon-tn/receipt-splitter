@@ -130,9 +130,9 @@ function submitItemModal() {
   const categoryId = $('#modalItemCategory').value || bill.categories[0]?.id || null;
 
   bill.items.push({ id: cryptoId(), name, qty, price, categoryId, consumerIds: [] });
+  ui.closeItemModal();
   persist();
   renderAll();
-  ui.closeItemModal();
   ui.showToast(`เพิ่ม "${name}" แล้ว`);
 }
 

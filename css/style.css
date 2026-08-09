@@ -751,6 +751,7 @@ button, input, textarea, select{
   padding: 20px;
   z-index: 200;
 }
+.modal-overlay[hidden]{ display:none; }
 .modal{
   background: var(--white);
   border-radius: var(--radius-lg);
@@ -824,7 +825,7 @@ button, input, textarea, select{
 /* ---------- Toast ---------- */
 .toast{
   position: fixed;
-  bottom: 24px;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
   background: var(--ink);
