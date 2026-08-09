@@ -212,11 +212,14 @@
 
 <div id="itemModalOverlay" class="modal-overlay" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
-    <p class="modal__title" id="itemModalTitle">🍽️ เพิ่มรายการอาหาร</p>
+    <div class="modal__header">
+      <p class="modal__title" id="itemModalTitle">🍽️ เพิ่มรายการอาหาร</p>
+      <button class="modal__close" id="modalCloseBtn" type="button" aria-label="ปิดหน้าต่างเพิ่มรายการ">×</button>
+    </div>
 
     <label class="modal__field">
       <span>ชื่อรายการ</span>
-      <input type="text" id="modalItemName" placeholder="เช่น ต้มยำกุ้ง" autocomplete="off">
+      <input type="text" id="modalItemName" placeholder="เช่น ต้มยำกุ้ง" autocomplete="off" required>
     </label>
 
     <div class="modal__row">
@@ -226,7 +229,7 @@
       </label>
       <label class="modal__field modal__field--small">
         <span>ราคา/หน่วย (฿)</span>
-        <input type="number" id="modalItemPrice" min="0" step="0.01" value="">
+        <input type="number" id="modalItemPrice" min="0" step="0.01" value="" required>
       </label>
     </div>
 

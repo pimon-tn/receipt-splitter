@@ -95,6 +95,7 @@ $('#manualStartBtn').addEventListener('click', () => {
 /* ============ Popup เพิ่มรายการอาหาร ============ */
 
 $('#modalCancelBtn').addEventListener('click', () => ui.closeItemModal());
+$('#modalCloseBtn').addEventListener('click', () => ui.closeItemModal());
 
 $('#itemModalOverlay').addEventListener('click', (e) => {
   if (e.target === $('#itemModalOverlay')) ui.closeItemModal();
@@ -105,9 +106,27 @@ document.addEventListener('keydown', (e) => {
 });
 
 function submitItemModal() {
-  const name = $('#modalItemName').value.trim() || 'รายการใหม่';
+  const nameInput = $('#modalItemName');
+  const priceInput = $('#modalItemPrice');
+  const name = nameInput.value.trim();
+  const priceRaw = priceInput.value.trim();
+
+  if (!name) {
+    nameInput.setAttribute('aria-invalid', 'true');
+    nameInput.focus();
+    ui.showToast('กรุณากรอกชื่อรายการ');
+    return;
+  }
+
+  const price = Number(priceRaw);
+  if (!priceRaw || !Number.isFinite(price) || price < 0) {
+    priceInput.setAttribute('aria-invalid', 'true');
+    priceInput.focus();
+    ui.showToast('กรุณากรอกราคาให้ถูกต้อง');
+    return;
+  }
+
   const qty = Math.max(1, parseInt($('#modalItemQty').value, 10) || 1);
-  const price = Math.max(0, parseFloat($('#modalItemPrice').value) || 0);
   const categoryId = $('#modalItemCategory').value || bill.categories[0]?.id || null;
 
   bill.items.push({ id: cryptoId(), name, qty, price, categoryId, consumerIds: [] });
@@ -120,7 +139,9 @@ function submitItemModal() {
 $('#modalSubmitBtn').addEventListener('click', submitItemModal);
 
 ['modalItemName', 'modalItemQty', 'modalItemPrice'].forEach((id) => {
-  $(`#${id}`).addEventListener('keydown', (e) => {
+  const input = $(`#${id}`);
+  input.addEventListener('input', () => input.removeAttribute('aria-invalid'));
+  input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       submitItemModal();

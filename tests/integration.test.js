@@ -280,7 +280,28 @@ describe('การใช้งานจริงทั้งวงจร: เ�
   });
 });
 
-describe('Popup เพิ่มรายการ: ยกเลิก / Escape / คลิกนอกกล่อง', () => {
+describe('Popup เพิ่มรายการ: ตรวจข้อมูล / ยกเลิก / ปิด', () => {
+  test('ต้องกรอกชื่อรายการและราคาก่อน จึงจะเพิ่มรายการได้', async () => {
+    setupDom();
+    await bootApp();
+
+    click($('#addItemBtn'));
+    click($('#modalSubmitBtn'));
+    assert.equal($('#itemModalOverlay').hidden, false, 'ห้ามปิด popup หากยังไม่มีชื่อและราคา');
+    assert.equal($$('#itemsBody .item-card').length, 0);
+    assert.equal($('#modalItemName').getAttribute('aria-invalid'), 'true');
+
+    setValue($('#modalItemName'), 'รายการทดสอบ');
+    click($('#modalSubmitBtn'));
+    assert.equal($('#itemModalOverlay').hidden, false, 'ห้ามเพิ่มหากยังไม่มีราคา');
+    assert.equal($('#modalItemPrice').getAttribute('aria-invalid'), 'true');
+
+    setValue($('#modalItemPrice'), '45');
+    click($('#modalSubmitBtn'));
+    assert.equal($('#itemModalOverlay').hidden, true, 'ต้องปิด popup เมื่อเพิ่มรายการสำเร็จ');
+    assert.equal($$('#itemsBody .item-card').length, 1);
+  });
+
   test('กด "ยกเลิก" ต้องปิด popup โดยไม่เพิ่มรายการ', async () => {
     setupDom();
     await bootApp();
@@ -288,6 +309,17 @@ describe('Popup เพิ่มรายการ: ยกเลิก / Escape /
     click($('#addItemBtn'));
     setValue($('#modalItemName'), 'ไม่ควรถูกเพิ่ม');
     click($('#modalCancelBtn'));
+
+    assert.equal($('#itemModalOverlay').hidden, true);
+    assert.equal($$('#itemsBody .item-card').length, 0);
+  });
+
+  test('กดปุ่ม × ต้องปิด popup โดยไม่เพิ่มรายการ', async () => {
+    setupDom();
+    await bootApp();
+
+    click($('#addItemBtn'));
+    click($('#modalCloseBtn'));
 
     assert.equal($('#itemModalOverlay').hidden, true);
     assert.equal($$('#itemsBody .item-card').length, 0);

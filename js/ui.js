@@ -268,8 +268,10 @@ export function openItemModal(bill) {
   const categorySelect = $('#modalItemCategory');
 
   nameInput.value = '';
+  nameInput.removeAttribute('aria-invalid');
   qtyInput.value = '1';
   priceInput.value = '';
+  priceInput.removeAttribute('aria-invalid');
   categorySelect.innerHTML = bill.categories
     .map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
     .join('');

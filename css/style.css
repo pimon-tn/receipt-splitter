@@ -1,35 +1,35 @@
 /* ==========================================================
-   หารบิล — Cream & Orange friendly theme
+   หารบิล — Terracotta & pastel charcoal theme
    Token system:
-   --cream        #FFF7ED  page background (warm cream)
-   --white        #FFFFFF  card surfaces
-   --cream-soft   #FFEDD8  soft accent surfaces (chips, hover)
-   --orange       #FB8A3C  primary accent / CTAs
-   --orange-strong#F3701A  hover / emphasis / big numbers
-   --orange-pale  #FFD9AE  progress / selected pill backgrounds
-   --ink          #402E1F  warm near-black text
-   --muted        #A98F72  secondary / muted text
-   --line         #F3E2CB  dividers, borders
+   --cream        #3E3A38  app background (pastel charcoal)
+   --white        #524C48  card surfaces (muted gray-brown)
+   --cream-soft   #5D5651  soft accent surfaces (chips, hover)
+   --orange       #C86238  primary terracotta / CTAs
+   --orange-strong#E07A4D  highlight orange / emphasis
+   --orange-pale  #744F40  selected-pill backgrounds
+   --ink          #F7ECE1  primary cream text
+   --muted        #D5C8BE  secondary text
+   --line         #6D625C  dividers, borders
    ========================================================== */
 
 :root{
-  --cream: #FFF7ED;
-  --white: #FFFFFF;
-  --cream-soft: #FFEDD8;
-  --orange: #FB8A3C;
-  --orange-strong: #F3701A;
-  --orange-pale: #FFD9AE;
-  --ink: #402E1F;
-  --muted: #A98F72;
-  --line: #F3E2CB;
+  --cream: #3E3A38;
+  --white: #524C48;
+  --cream-soft: #5D5651;
+  --orange: #C86238;
+  --orange-strong: #E07A4D;
+  --orange-pale: #744F40;
+  --ink: #F7ECE1;
+  --muted: #D5C8BE;
+  --line: #6D625C;
   --font-display: 'Baloo 2', 'IBM Plex Sans Thai', sans-serif;
   --font-body: 'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif;
   --font-money: 'Space Mono', monospace;
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-sm: 10px;
-  --shadow-soft: 0 6px 20px rgba(180, 110, 40, .10);
-  --shadow-lift: 0 10px 28px rgba(180, 110, 40, .16);
+  --shadow-soft: 0 6px 20px rgba(0, 0, 0, .18);
+  --shadow-lift: 0 10px 28px rgba(0, 0, 0, .28);
 }
 
 *{ box-sizing: border-box; }
@@ -49,7 +49,10 @@ body{
   padding: 20px 12px 56px;
 }
 
-button, input, textarea, select{ font-family: inherit; }
+button, input, textarea, select{
+  font-family: inherit;
+  color: var(--ink);
+}
 
 /* ---------- Shell ---------- */
 .receipt{
@@ -63,14 +66,14 @@ button, input, textarea, select{ font-family: inherit; }
 
 /* ---------- Header ---------- */
 .receipt__head{
-  background: linear-gradient(135deg, var(--orange) 0%, #FFAA5C 100%);
+  background: linear-gradient(135deg, var(--orange) 0%, var(--orange-strong) 100%);
   padding: 20px 20px 46px;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 .brand{ display:flex; align-items:center; gap:12px; }
 .brand__badge{
   font-size: 1.8rem;
-  background: rgba(255,255,255,.35);
+  background: rgba(247,236,225,.20);
   border-radius: 100%;
   width: 52px;
   height: 52px;
@@ -83,13 +86,13 @@ button, input, textarea, select{ font-family: inherit; }
   font-family: var(--font-display);
   font-weight:800;
   font-size: 1.65rem;
-  color: #fff;
+  color: var(--ink);
   margin: 0;
-  text-shadow: 0 1px 0 rgba(0,0,0,.05);
+  text-shadow: 0 1px 0 rgba(0,0,0,.12);
 }
 .receipt__subtitle{
   margin: 2px 0 0;
-  color: rgba(255,255,255,.92);
+  color: rgba(247,236,225,.92);
   font-size: .78rem;
   font-weight:500;
 }
@@ -124,7 +127,7 @@ button, input, textarea, select{ font-family: inherit; }
 .tab__label{ font-size: .68rem; font-weight:600; }
 .tab[aria-selected="true"]{
   background: var(--orange);
-  color: #fff;
+  color: var(--ink);
 }
 
 /* ---------- Panels ---------- */
@@ -163,7 +166,7 @@ button, input, textarea, select{ font-family: inherit; }
   border-radius: 999px;
   border: 2px solid var(--orange);
   background: var(--orange);
-  color: #fff;
+  color: var(--ink);
   padding: 12px 18px;
   font-size: .9rem;
   font-weight:700;
@@ -310,7 +313,7 @@ button, input, textarea, select{ font-family: inherit; }
 }
 .chip button{
   border:none;
-  background: rgba(255,255,255,.6);
+  background: rgba(247,236,225,.14);
   color: var(--orange-strong);
   cursor:pointer;
   font-size: .8rem;
@@ -492,7 +495,7 @@ button, input, textarea, select{ font-family: inherit; }
   left:3px;
   width:20px;
   height:20px;
-  background:#fff;
+  background:var(--ink);
   border-radius:100%;
   box-shadow: 0 1px 3px rgba(0,0,0,.25);
   transition: transform .15s ease;
@@ -530,7 +533,7 @@ button, input, textarea, select{ font-family: inherit; }
 }
 .segmented__btn.is-active{
   background: var(--orange);
-  color: #fff;
+  color: var(--ink);
 }
 
 .charge-row{
@@ -586,8 +589,8 @@ button, input, textarea, select{ font-family: inherit; }
   width: 34px;
   height: 34px;
   border-radius: 100%;
-  background: linear-gradient(135deg, var(--orange), #FFAA5C);
-  color: #fff;
+  background: linear-gradient(135deg, var(--orange), var(--orange-strong));
+  color: var(--ink);
   font-family: var(--font-display);
   font-weight:700;
   font-size: .9rem;
@@ -640,9 +643,9 @@ button, input, textarea, select{ font-family: inherit; }
 .assign-tag.is-selected{
   background: var(--orange);
   border-color: var(--orange);
-  color: #fff;
+  color: var(--ink);
 }
-.assign-tag.is-selected .avatar{ background: rgba(255,255,255,.3); }
+.assign-tag.is-selected .avatar{ background: rgba(247,236,225,.22); }
 
 .assign-tag--all{
   border-style: dashed;
@@ -655,7 +658,7 @@ button, input, textarea, select{ font-family: inherit; }
   border-style: solid;
   background: var(--orange);
   border-color: var(--orange);
-  color: #fff;
+  color: var(--ink);
 }
 .assign-people__sep{
   width: 1px;
@@ -677,7 +680,7 @@ button, input, textarea, select{ font-family: inherit; }
   border-radius: 999px;
   cursor:pointer;
 }
-.split-mode__btn.is-active{ background: var(--orange); color: #fff; border-color: var(--orange); }
+.split-mode__btn.is-active{ background: var(--orange); color: var(--ink); border-color: var(--orange); }
 
 .split-result{ display:flex; flex-direction:column; gap:10px; }
 .split-card{
@@ -712,7 +715,7 @@ button, input, textarea, select{ font-family: inherit; }
 .stamp-note{
   margin-top: 18px;
   text-align:center;
-  color: #fff;
+  color: var(--ink);
   background: var(--orange);
   display:block;
   padding: 8px 14px;
@@ -741,7 +744,7 @@ button, input, textarea, select{ font-family: inherit; }
 .modal-overlay{
   position: fixed;
   inset: 0;
-  background: rgba(64, 46, 34, .45);
+  background: rgba(26, 24, 23, .70);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -758,13 +761,34 @@ button, input, textarea, select{ font-family: inherit; }
   max-height: 90vh;
   overflow-y: auto;
 }
+.modal__header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
 .modal__title{
   font-family: var(--font-display);
   font-weight:700;
   font-size: 1.05rem;
-  margin: 0 0 16px;
+  margin: 0;
   color: var(--ink);
 }
+.modal__close{
+  display:grid;
+  place-items:center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--cream-soft);
+  color: var(--ink);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor:pointer;
+}
+.modal__close:hover{ background: var(--orange); }
 .modal__field{
   display:flex;
   flex-direction:column;
@@ -787,6 +811,7 @@ button, input, textarea, select{ font-family: inherit; }
   outline:none;
   border-color: var(--orange);
 }
+.modal__field input[aria-invalid="true"]{ border-color: var(--orange-strong); }
 .modal__row{ display:flex; gap: 10px; }
 .modal__field--small{ flex:1; min-width: 0; }
 .modal__actions{
@@ -803,7 +828,7 @@ button, input, textarea, select{ font-family: inherit; }
   left: 50%;
   transform: translateX(-50%);
   background: var(--ink);
-  color: #fff;
+  color: var(--cream);
   padding: 12px 20px;
   border-radius: 100px;
   font-size: .82rem;
