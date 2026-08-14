@@ -38,19 +38,58 @@ export function calcBillTotals(items, settings) {
 }
 
 /**
+ * ปัดตัวเลขเป็นสตางค์ (2 ทศนิยม) ค่าที่ไม่ใช่ตัวเลขถือเป็น 0
+ */
+function roundMoney(n) {
+  return Math.round((Number.isFinite(n) ? n : 0) * 100) / 100;
+}
+
+/**
+ * ปัดยอดของแต่ละคนเป็นสตางค์ แล้วเกลี่ยเศษสตางค์ที่เหลือ (จากการปัดลงทุกคนก่อน)
+ * ให้คนที่มีเศษทศนิยมมากที่สุดก่อน (largest-remainder method) เพื่อให้ผลรวมของยอดที่
+ * ปัดแล้วตรงกับ targetTotal ที่ปัดแล้วเป๊ะ ไม่งั้นยอดที่แสดงต่อคนรวมกันจะไม่เท่ายอดบิลที่แสดง
+ */
+function distributeRounded(amounts, targetTotal) {
+  if (amounts.length === 0) return [];
+
+  const targetCents = Math.round(roundMoney(targetTotal) * 100);
+  const rawCents = amounts.map((a) => (Number.isFinite(a) ? a : 0) * 100);
+  const flooredCents = rawCents.map((c) => Math.floor(c));
+  const flooredSum = flooredCents.reduce((sum, c) => sum + c, 0);
+
+  const order = rawCents
+    .map((c, i) => ({ i, frac: c - flooredCents[i] }))
+    .sort((a, b) => b.frac - a.frac);
+
+  const resultCents = flooredCents.slice();
+  let remainder = targetCents - flooredSum;
+  let idx = 0;
+  while (remainder !== 0) {
+    const slot = order[idx % order.length].i;
+    resultCents[slot] += remainder > 0 ? 1 : -1;
+    remainder += remainder > 0 ? -1 : 1;
+    idx++;
+  }
+
+  return resultCents.map((c) => c / 100);
+}
+
+/**
  * หารเท่ากันทุกคน: เอายอดสุทธิทั้งบิลหารด้วยจำนวนคน
+ * ปัดเศษสตางค์ให้ผลรวมของยอดที่แสดงต่อคนตรงกับยอดสุทธิที่แสดงเป๊ะ
  */
 export function splitEqual(items, people, settings) {
   const totals = calcBillTotals(items, settings);
   const count = people.length || 1;
-  const perPerson = totals.grandTotal / count;
+  const rawPerPerson = totals.grandTotal / count;
+  const amounts = distributeRounded(people.map(() => rawPerPerson), totals.grandTotal);
 
   return {
     totals,
-    perPerson: people.map((p) => ({
+    perPerson: people.map((p, i) => ({
       personId: p.id,
       name: p.name,
-      amount: perPerson,
+      amount: amounts[i],
     })),
   };
 }
@@ -81,17 +120,19 @@ export function splitItemized(items, people, settings) {
 
   const extraCharges = totals.grandTotal - totals.subtotal;
 
-  const perPerson = people.map((p) => {
+  const rawAmounts = people.map((p) => {
     const personSubtotal = perPersonSubtotal.get(p.id) || 0;
     const proportion = totals.subtotal > 0 ? personSubtotal / totals.subtotal : 1 / count;
-    const amount = personSubtotal + proportion * extraCharges;
-    return {
-      personId: p.id,
-      name: p.name,
-      subtotal: personSubtotal,
-      amount,
-    };
+    return personSubtotal + proportion * extraCharges;
   });
+  const amounts = distributeRounded(rawAmounts, totals.grandTotal);
+
+  const perPerson = people.map((p, i) => ({
+    personId: p.id,
+    name: p.name,
+    subtotal: perPersonSubtotal.get(p.id) || 0,
+    amount: amounts[i],
+  }));
 
   return { totals, perPerson };
 }

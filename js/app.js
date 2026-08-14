@@ -61,14 +61,14 @@ function updateRowSum(id) {
 }
 
 $('#addItemBtn').addEventListener('click', () => {
-  ui.openItemModal(bill);
+  ui.openItemModal();
 });
 
 /* ============ เริ่มบิลด้วยตัวเอง (ไม่ต้องสแกน) ============ */
 
 $('#manualStartBtn').addEventListener('click', () => {
   ui.switchTab('items');
-  ui.openItemModal(bill);
+  ui.openItemModal();
 });
 
 /* ============ Popup เพิ่มรายการอาหาร ============ */
@@ -107,7 +107,7 @@ function submitItemModal() {
 
   const qty = Math.max(1, parseInt($('#modalItemQty').value, 10) || 1);
 
-  bill.items.push({ id: cryptoId(), name, qty, price, categoryId: null, consumerIds: [] });
+  bill.items.push({ id: cryptoId(), name, qty, price, consumerIds: [] });
   ui.closeItemModal();
   persist();
   renderAll();
@@ -213,7 +213,11 @@ const assignHandlers = {
   onSelectAllConsumers(itemId) {
     const item = bill.items.find((it) => it.id === itemId);
     if (!item) return;
-    item.consumerIds = bill.people.map((p) => p.id);
+    const consumerIds = item.consumerIds || [];
+    const allSelected = bill.people.length > 0 && bill.people.every((p) => consumerIds.includes(p.id));
+    // กดซ้ำตอนเลือกทุกคนอยู่แล้ว -> เคลียร์กลับเป็น [] (สถานะ implicit "ทุกคนกินร่วมกัน" ตามค่าเริ่มต้นของระบบ
+    // ไม่ใช่ "ไม่มีใครกินเลย" — ถ้าต้องการแบบนั้นต้องแตะถอดทีละคนต่อจากนี้)
+    item.consumerIds = allSelected ? [] : bill.people.map((p) => p.id);
     persist();
     ui.renderAssignList(bill, assignHandlers);
   },
@@ -311,7 +315,6 @@ $('#parseBtn').addEventListener('click', () => {
       name: p.name,
       qty: p.qty,
       price: p.price,
-      categoryId: null,
       consumerIds: [],
     });
   });

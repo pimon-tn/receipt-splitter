@@ -83,6 +83,21 @@ describe('splitEqual', () => {
     assert.equal(result.perPerson.length, 0);
     assert.ok(Number.isFinite(result.totals.grandTotal));
   });
+
+  test('หารไม่ลงตัว (฿100 ÷ 3 คน) ต้องปัดเศษสตางค์แล้วเกลี่ยเศษให้ผลรวมตรงกับยอดบิลเป๊ะ ไม่ใช่ 99.99', () => {
+    const items = [{ id: 'i1', name: 'ของกิน', qty: 1, price: 100, consumerIds: [] }];
+    const people = samplePeople(); // 3 คน
+    const result = splitEqual(items, people, noCharges);
+    const amounts = result.perPerson.map((p) => p.amount);
+    const sum = amounts.reduce((a, b) => a + b, 0);
+
+    assert.ok(Math.abs(sum - 100) < 1e-9, `ผลรวม ${sum} ต้องเท่ากับ 100.00 เป๊ะ`);
+
+    // 100/3 = 33.333... -> ปัดลงทุกคนได้ 33.33 เหลือเศษ 1 สตางค์ ต้องมีคนได้ 33.34 พอดี 1 คน
+    const formatted = amounts.map((a) => a.toFixed(2));
+    assert.equal(formatted.filter((s) => s === '33.34').length, 1);
+    assert.equal(formatted.filter((s) => s === '33.33').length, 2);
+  });
 });
 
 describe('splitItemized', () => {
@@ -94,7 +109,7 @@ describe('splitItemized', () => {
     result.perPerson.forEach((p) => assert.ok(Math.abs(p.amount - 10) < 1e-9));
   });
 
-  test('ผลรวมของทุกคนต้องเท่ากับ grandTotal เสมอ ไม่ว่าจะเลือกโหมด VAT แบบไหน', () => {
+  test('ผลรวมของยอดที่ปัดเศษแล้วของทุกคนต้องเท่ากับ grandTotal เสมอ ไม่ว่าจะเลือกโหมด VAT แบบไหน', () => {
     const scenarios = [
       noCharges,
       { vatEnabled: true, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 },
@@ -105,10 +120,21 @@ describe('splitItemized', () => {
       const result = splitItemized(sampleItems(), samplePeople(), settings);
       const sum = result.perPerson.reduce((a, p) => a + p.amount, 0);
       assert.ok(
-        Math.abs(sum - result.totals.grandTotal) < 1e-6,
+        Math.abs(sum - result.totals.grandTotal) < 1e-9,
         `sum ${sum} should equal grandTotal ${result.totals.grandTotal} for settings ${JSON.stringify(settings)}`
       );
     }
+  });
+
+  test('สัดส่วนไม่ลงตัว ต้องปัดเศษสตางค์แล้วเกลี่ยเศษให้ผลรวมตรงกับยอดบิลเป๊ะ', () => {
+    // ต้มยำ 100 บาท คนกินร่วมกัน 3 คน (ไม่ระบุ consumerIds = ทุกคนกิน) -> 33.33/33.33/33.34
+    const items = [{ id: 'i1', name: 'ต้มยำ', qty: 1, price: 100, consumerIds: [] }];
+    const settings = { vatEnabled: true, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
+    const result = splitItemized(items, samplePeople(), settings);
+    const amounts = result.perPerson.map((p) => p.amount);
+    const sum = amounts.reduce((a, b) => a + b, 0);
+    assert.ok(Math.abs(sum - result.totals.grandTotal) < 1e-9);
+    assert.equal(Math.round(sum * 100) / 100, Math.round(result.totals.grandTotal * 100) / 100);
   });
 
   test('คนที่ไม่ได้กินอะไรเลยต้องได้ยอด 0 ไม่ใช่ค่าติดลบหรือ NaN', () => {

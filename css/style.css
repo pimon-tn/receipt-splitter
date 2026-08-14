@@ -415,8 +415,6 @@ button, input, textarea, select{
 }
 .empty-hint__emoji{ font-size: 2.2rem; display:block; margin-bottom: 8px; }
 .empty-hint p{ margin: 0 0 4px; }
-.empty-hint__sub{ font-size: .78rem; opacity: .85; }
-.empty-hint--illustrated{ margin-top: 6px; }
 
 /* ---------- Charges & totals ---------- */
 .charges{ margin-bottom: 12px; display:flex; flex-direction:column; gap:10px; }

@@ -222,7 +222,7 @@ export function renderSplit(bill, mode) {
 
 /* ---------------- Add-item modal ---------------- */
 
-export function openItemModal(bill) {
+export function openItemModal() {
   const overlay = $('#itemModalOverlay');
   const nameInput = $('#modalItemName');
   const qtyInput = $('#modalItemQty');

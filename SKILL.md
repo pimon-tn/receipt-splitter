@@ -38,8 +38,7 @@ receipt-splitter/
 
 ```js
 bill = {
-  categories: [{ id, name }],
-  items: [{ id, name, qty, price, categoryId, consumerIds: [personId, ...] }],
+  items: [{ id, name, qty, price, consumerIds: [personId, ...] }],
   people: [{ id, name }],
   settings: {
     vatEnabled,      // boolean: มี VAT หรือไม่

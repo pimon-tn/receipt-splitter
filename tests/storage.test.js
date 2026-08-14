@@ -16,15 +16,17 @@ class MemoryStorage {
   clear() { this._data.clear(); }
 }
 
-beforeEach(() => {
+/** จำลอง localStorage/window ใหม่ให้สะอาดทุกเทสต์ */
+function stubGlobals() {
   global.localStorage = new MemoryStorage();
   global.window = { crypto: undefined }; // จำลองเบราว์เซอร์ที่ไม่มี crypto.randomUUID เพื่อทดสอบ fallback ด้วย
-});
+}
 
 describe('createEmptyBill', () => {
-  test('ได้โครงสร้างเริ่มต้นครบ พร้อมหมวดหมู่เริ่มต้น 2 อัน และไม่มี VAT/ค่าบริการ', () => {
+  beforeEach(stubGlobals);
+
+  test('ได้โครงสร้างเริ่มต้นครบ และไม่มี VAT/ค่าบริการ', () => {
     const bill = createEmptyBill();
-    assert.equal(bill.categories.length, 2);
     assert.equal(bill.items.length, 0);
     assert.equal(bill.people.length, 0);
     assert.equal(bill.settings.vatEnabled, false);
@@ -32,15 +34,11 @@ describe('createEmptyBill', () => {
     assert.equal(bill.settings.vatPercent, 7);
     assert.equal(bill.settings.servicePercent, 10);
   });
-
-  test('แต่ละครั้งที่สร้างบิลใหม่ ต้องได้ id หมวดหมู่ที่ไม่ซ้ำกัน', () => {
-    const bill = createEmptyBill();
-    const ids = bill.categories.map((c) => c.id);
-    assert.equal(new Set(ids).size, ids.length);
-  });
 });
 
 describe('cryptoId', () => {
+  beforeEach(stubGlobals);
+
   test('เมื่อไม่มี crypto.randomUUID ต้อง fallback เป็น id แบบสุ่มที่ไม่ซ้ำกัน', () => {
     const a = cryptoId();
     const b = cryptoId();
@@ -55,9 +53,11 @@ describe('cryptoId', () => {
 });
 
 describe('saveBill / loadBill', () => {
+  beforeEach(stubGlobals);
+
   test('บันทึกแล้วโหลดกลับมาต้องได้ข้อมูลเดิมครบถ้วน', () => {
     const bill = createEmptyBill();
-    bill.items.push({ id: 'i1', name: 'ต้มยำ', qty: 1, price: 180, categoryId: bill.categories[0].id, consumerIds: [] });
+    bill.items.push({ id: 'i1', name: 'ต้มยำ', qty: 1, price: 180, consumerIds: [] });
     bill.people.push({ id: 'p1', name: 'เอ' });
     bill.settings.vatEnabled = true;
     bill.settings.vatMode = 'inclusive';
@@ -82,7 +82,7 @@ describe('saveBill / loadBill', () => {
     global.localStorage.setItem('receipt-splitter:bill', '{invalid json...');
     const loaded = loadBill();
     assert.equal(loaded.items.length, 0);
-    assert.equal(loaded.categories.length, 2);
+    assert.equal(loaded.people.length, 0);
   });
 
   test('ข้อมูลบิลเวอร์ชันเก่า (serviceChargePercent/vatPercent แบบเดิม) ต้องถูก migrate เป็นโครงสร้างใหม่ถูกต้อง', () => {
@@ -102,6 +102,8 @@ describe('saveBill / loadBill', () => {
     // ข้อมูลรายการ/คนเดิมต้องไม่หายไปตอน migrate
     assert.equal(loaded.items.length, 1);
     assert.equal(loaded.people.length, 1);
+    // ข้อมูลเก่าที่มี categories/categoryId ค้างอยู่ (จากก่อนถอด feature หมวดหมู่ออก) ต้องไม่ทำให้พัง
+    assert.equal(loaded.categories, undefined);
   });
 
   test('ข้อมูลบิลเวอร์ชันเก่าที่ปิดค่าบริการ/VAT ไว้ (ค่าเป็น 0) ต้อง migrate เป็นปิดสวิตช์ (ไม่ใช่เปิดแล้วเป็น 0%)', () => {
@@ -116,6 +118,8 @@ describe('saveBill / loadBill', () => {
 });
 
 describe('clearBill', () => {
+  beforeEach(stubGlobals);
+
   test('ล้างข้อมูลแล้วโหลดใหม่ต้องได้บิลเปล่า', () => {
     const bill = createEmptyBill();
     bill.people.push({ id: 'p1', name: 'เอ' });

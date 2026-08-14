@@ -9,10 +9,6 @@ const STORAGE_KEY = 'receipt-splitter:bill';
  */
 export function createEmptyBill() {
   return {
-    categories: [
-      { id: cryptoId(), name: 'อาหาร' },
-      { id: cryptoId(), name: 'เครื่องดื่ม' },
-    ],
     items: [],
     people: [],
     settings: {
@@ -51,7 +47,6 @@ export function loadBill() {
         };
 
     return {
-      categories: parsed.categories || [],
       items: parsed.items || [],
       people: parsed.people || [],
       settings,

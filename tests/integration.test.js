@@ -140,7 +140,7 @@ describe('การใช้งานจริงทั้งวงจร: เ�
     const total = splitCards
       .map((c) => parseFloat(c.querySelector('.split-card__amount').textContent.replace('฿', '')))
       .reduce((a, b) => a + b, 0);
-    assert.ok(Math.abs(total - 376.64) < 0.02, 'ไม่ว่าจะแบ่งกันยังไง รวมกันต้องได้ยอดสุทธิทั้งบิลเท่าเดิม');
+    assert.ok(Math.abs(total - 376.64) < 1e-9, 'ไม่ว่าจะแบ่งกันยังไง รวมกันต้องได้ยอดสุทธิทั้งบิลเท่าเดิมเป๊ะ (ปัดเศษสตางค์เกลี่ยแล้ว)');
 
     // ---- ข้อมูลต้องถูกบันทึกลง localStorage จริง ไม่ใช่แค่ค้างอยู่ในหน่วยความจำ ----
     const saved = JSON.parse(global.localStorage.getItem('receipt-splitter:bill'));
@@ -418,6 +418,28 @@ describe('"ใครกินอะไรบ้าง" — ปุ่มเลื
     const personTags = assignItem.querySelectorAll('.assign-tag:not(.assign-tag--all)');
     assert.equal(personTags[0].classList.contains('is-selected'), false, 'คนที่แตะออกต้องถูก deselect');
     assert.equal(personTags[1].classList.contains('is-selected'), true, 'อีกคนต้องยังถูกเลือกอยู่');
+  });
+
+  test('กดปุ่ม "ทุกคน" อีกครั้งตอนเลือกทุกคนอยู่แล้ว ต้องยกเลิกเลือกทุกคนพร้อมกัน (toggle)', async () => {
+    setupDom();
+    await bootApp();
+
+    addItemViaModal({ name: 'ส้มตำ', qty: 1, price: 90 });
+    click($('#addPersonBtn'));
+    click($('#addPersonBtn'));
+
+    click($('.tab[data-tab="people"]'));
+    const allBtn = () => $$('#assignList .assign-item')[0].querySelector('.assign-tag--all');
+
+    click(allBtn()); // ครั้งที่ 1: เลือกทุกคน
+    assert.equal(allBtn().classList.contains('is-selected'), true);
+
+    click(allBtn()); // ครั้งที่ 2: ต้องยกเลิกเลือกทุกคนพร้อมกัน
+
+    const assignItemAfter = $$('#assignList .assign-item')[0];
+    assert.equal(assignItemAfter.querySelector('.assign-tag--all').classList.contains('is-selected'), false);
+    const personTags = assignItemAfter.querySelectorAll('.assign-tag:not(.assign-tag--all)');
+    personTags.forEach((tag) => assert.equal(tag.classList.contains('is-selected'), false, 'ทุกคนต้องถูกยกเลิกเลือกหลังกด "ทุกคน" ครั้งที่ 2'));
   });
 });
 
