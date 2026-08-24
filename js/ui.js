@@ -49,8 +49,8 @@ const TOTAL_STEPS = STEPS.length;
 /* ไอคอนลูกศรของปุ่มนำทาง — path มาจาก Material Icons ธีม Rounded ของ MUI
    (ArrowBackIosRounded / ArrowForwardIosRounded) ฝัง SVG ไว้ในโค้ดตรง ๆ
    ไม่โหลดจาก CDN เพราะแอปนี้ต้องทำงานแบบออฟไลน์ได้ */
-const ICON_BACK = '<svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16.62 2.99c-.49-.49-1.28-.49-1.77 0L6.54 11.3c-.39.39-.39 1.02 0 1.41l8.31 8.31c.49.49 1.28.49 1.77 0s.49-1.28 0-1.77L9.38 12l7.25-7.25c.48-.48.48-1.28-.01-1.76"/></svg>';
-const ICON_NEXT = '<svg class="btn__ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.38 21.01c.49.49 1.28.49 1.77 0l8.31-8.31c.39-.39.39-1.02 0-1.41L9.15 2.98c-.49-.49-1.28-.49-1.77 0s-.49 1.28 0 1.77L14.62 12l-7.25 7.25c-.48.48-.48 1.28.01 1.76"/></svg>';
+const ICON_BACK = '<span class="material-icons-round btn__ico" aria-hidden="true">chevron_left</span>';
+const ICON_NEXT = '<span class="material-icons-round btn__ico" aria-hidden="true">chevron_right</span>';
 
 let currentTab = 'landing';
 // โหมดการหารที่เลือกอยู่ เก็บเป็น view state เพราะมันกำหนดว่า flow มีหน้า assign หรือไม่
@@ -265,13 +265,13 @@ export function renderItems(bill, handlers) {
     card.innerHTML = `
       <div class="item-card__row1">
         <input type="text" class="item-name" value="${escapeHtml(item.name)}" placeholder="ชื่อรายการ เช่น ต้มยำกุ้ง">
-        <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}">&times;</button>
+        <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}"><span class="material-icons-round" aria-hidden="true">delete_outline</span></button>
       </div>
       <div class="item-card__row2">
         <div class="qty-stepper">
-          <button type="button" class="qty-btn qty-btn--minus" aria-label="ลดจำนวน">&minus;</button>
+          <button type="button" class="qty-btn qty-btn--minus" aria-label="ลดจำนวน"><span class="material-icons-round" aria-hidden="true">remove</span></button>
           <input type="number" class="item-qty" min="1" step="1" value="${item.qty}" aria-label="จำนวน">
-          <button type="button" class="qty-btn qty-btn--plus" aria-label="เพิ่มจำนวน">+</button>
+          <button type="button" class="qty-btn qty-btn--plus" aria-label="เพิ่มจำนวน"><span class="material-icons-round" aria-hidden="true">add</span></button>
         </div>
         <label class="price-field"><span>฿</span><input type="number" class="item-price" min="0" step="0.01" value="${item.price}" aria-label="ราคาต่อหน่วย"></label>
         <span class="item-line-total" aria-label="ยอดรวมรายการ">฿${formatMoney(item.qty * item.price)}</span>
@@ -335,7 +335,7 @@ export function renderPeople(bill, handlers) {
     li.innerHTML = `
       <span class="avatar" data-tone="${toneOf(index)}">${getInitial(person.name)}</span>
       <input type="text" class="person-name" value="${escapeHtml(person.name)}" placeholder="ชื่อคน">
-      <button type="button" class="row-del" aria-label="ลบ ${escapeHtml(person.name)}">&times;</button>
+      <button type="button" class="row-del" aria-label="ลบ ${escapeHtml(person.name)}"><span class="material-icons-round" aria-hidden="true">close</span></button>
     `;
     $('.person-name', li).addEventListener('input', (e) => {
       handlers.onUpdatePerson(person.id, e.target.value);
@@ -357,7 +357,7 @@ export function renderAssignList(bill, handlers) {
     warn.hidden = true;
     wrap.innerHTML = `
       <div class="empty-state">
-        <span class="empty-state__icon" aria-hidden="true">🍴</span>
+        <span class="empty-state__icon material-icons-round" aria-hidden="true">restaurant</span>
         <p class="empty-state__title">ยังระบุคนกินไม่ได้</p>
         <p class="empty-state__desc">ต้องมีทั้งรายการอาหารและรายชื่อคนก่อน</p>
       </div>`;
@@ -441,7 +441,7 @@ export function renderSplit(bill, mode, handlers = {}) {
     const missingPeople = bill.people.length === 0;
     wrap.innerHTML = `
       <div class="empty-state">
-        <span class="empty-state__icon" aria-hidden="true">${missingPeople ? '🙋' : '🍽️'}</span>
+        <span class="empty-state__icon material-icons-round" aria-hidden="true">${missingPeople ? 'person_add' : 'restaurant'}</span>
         <p class="empty-state__title">${missingPeople ? 'ยังไม่มีรายชื่อคนกิน' : 'ยังไม่มีรายการอาหาร'}</p>
         <p class="empty-state__desc">${missingPeople ? 'เพิ่มรายชื่อคนกินก่อน จึงจะหารบิลได้' : 'เพิ่มรายการอาหารก่อน จึงจะหารบิลได้'}</p>
       </div>`;
@@ -524,7 +524,7 @@ function renderSummaryPanel(bill, perPerson) {
         : '<p class="summary-empty">เพิ่มรายการและรายชื่อเพื่อดูยอดสรุป</p>'}
     </div>
     ${matches
-      ? '<div class="summary-note"><span aria-hidden="true">✓</span><span>ยอดของทุกคนรวมกันตรงกับยอดบิลแล้ว<small>เยี่ยมเลย!</small></span></div>'
+      ? '<div class="summary-note"><span class="material-icons-round" aria-hidden="true">check_circle</span><span>ยอดของทุกคนรวมกันตรงกับยอดบิลแล้ว<small>เยี่ยมเลย!</small></span></div>'
       : ''}
   `;
 }
@@ -577,7 +577,7 @@ export function openPersonSheet(bill, mode, personId) {
 
     <div class="person-total"><span>ยอดที่ต้องจ่าย</span><strong>฿${formatMoney(row.amount)}</strong></div>
 
-    <p class="field-label">🍴 รายการที่หาร <span class="items-count">${items.length} รายการ</span></p>
+    <p class="field-label"><span class="material-icons-round inline-icon" aria-hidden="true">restaurant</span> รายการที่หาร <span class="items-count">${items.length} รายการ</span></p>
     <div class="person-items">${itemsHtml}</div>
 
     <div class="person-breakdown">${breakdown}</div>
