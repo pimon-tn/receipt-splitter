@@ -145,21 +145,44 @@ export function formatMoney(n) {
 }
 
 /**
- * สรุปว่าแต่ละคนกินรายการอะไรบ้าง (ไม่เกี่ยวกับการคำนวณเงิน ใช้แสดงผลอย่างเดียว)
+ * สรุปว่าแต่ละคนกินรายการอะไรบ้าง พร้อมส่วนแบ่งของรายการนั้น ๆ (ใช้แสดงผลอย่างเดียว)
  * ใช้กฎเดียวกับ splitItemized: ถ้ารายการไหนไม่ได้ระบุคนกิน (consumerIds ว่าง) ถือว่าทุกคนกินร่วมกัน
- * คืนค่า Map<personId, Array<{name, qty}>>
+ *
+ * คืนค่า Map<personId, Array<{ itemId, name, qty, unitPrice, lineTotal, sharedWith, share, isShared }>>
+ * - sharedWith = จำนวนคนที่หารรายการนี้ร่วมกัน
+ * - share      = ส่วนแบ่งค่าอาหารของคนนี้ในรายการนี้ (ยังไม่รวมค่าบริการ/ภาษี)
  */
 export function getConsumptionSummary(items, people) {
   const map = new Map(people.map((p) => [p.id, []]));
+  const allIds = people.map((p) => p.id);
+
   for (const item of items) {
-    const consumers = item.consumerIds && item.consumerIds.length > 0
-      ? item.consumerIds
-      : people.map((p) => p.id);
-    for (const personId of consumers) {
-      if (map.has(personId)) {
-        map.get(personId).push({ name: item.name || 'ไม่มีชื่อ', qty: item.qty });
-      }
+    const consumers = item.consumerIds && item.consumerIds.length > 0 ? item.consumerIds : allIds;
+    // นับเฉพาะคนที่ยังอยู่ในรายชื่อจริง เผื่อ consumerIds ค้างชื่อคนที่ถูกลบไปแล้ว
+    const validConsumers = consumers.filter((id) => map.has(id));
+    const sharedWith = validConsumers.length || allIds.length || 1;
+    const lineTotal = item.qty * item.price;
+
+    for (const personId of validConsumers) {
+      map.get(personId).push({
+        itemId: item.id,
+        name: item.name || 'ไม่มีชื่อ',
+        qty: item.qty,
+        unitPrice: item.price,
+        lineTotal,
+        sharedWith,
+        share: lineTotal / sharedWith,
+        isShared: sharedWith > 1,
+      });
     }
   }
   return map;
+}
+
+/**
+ * นับรายการที่ยังไม่ได้ระบุว่าใครกิน — ใช้เตือนผู้ใช้ก่อนหารแบบ "ตามรายการที่กิน"
+ * (รายการเหล่านี้ระบบจะหารให้ทุกคนโดยอัตโนมัติ ไม่ได้หายไปจากบิล)
+ */
+export function countUnassignedItems(items) {
+  return items.filter((it) => !it.consumerIds || it.consumerIds.length === 0).length;
 }

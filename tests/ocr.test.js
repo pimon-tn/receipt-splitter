@@ -4,7 +4,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseReceiptLines } from '../js/ocr.js';
+import { parseReceiptLines, computeOtsuThreshold } from '../js/ocr.js';
 
 describe('parseReceiptLines — การแยกรายการพื้นฐาน (ไม่มีเส้นคั่นส่วน)', () => {
   test('อ่านรายการพื้นฐานที่มีจุดไข่ปลาคั่นระหว่างชื่อกับราคา', () => {
@@ -254,5 +254,57 @@ describe('parseReceiptLines — เทียบยอดรวมที่พา
     const { reconciliation } = parseReceiptLines(text);
     assert.equal(reconciliation.checked, false, 'ไม่มี subtotal และ total ก็ไม่ควรเอามาเทียบตรง ๆ เพราะรวม VAT อยู่แล้ว');
     assert.equal(reconciliation.matches, true);
+  });
+});
+
+describe('parseReceiptLines — ทนต่อ OCR ที่เว้นวรรคระหว่างตัวอักษรไทย (พบจากใบเสร็จจริง)', () => {
+  // Tesseract อ่านภาษาไทยพลาดบ่อยครั้งด้วยการแทรกช่องว่างระหว่างตัวอักษรแทบทุกตัว
+  // เช่น "คิวที่ 14" กลายเป็น "ค ิ ว ท ี ่ 14" — ต้องไม่ให้บรรทัดพวกนี้หลุดไปเป็นรายการอาหาร
+
+  test('บรรทัดคิว/โต๊ะที่ตัวอักษรไทยถูกเว้นวรรคจน .includes() ตรง ๆ ไม่เจอ ต้องยังถูกข้าม', () => {
+    const text = ['ค ิ ว ท ี ่ 14', 'ต้มยำกุ้ง 180.00'].join('\n');
+    const { items } = parseReceiptLines(text);
+    assert.equal(items.length, 1);
+    assert.equal(items[0].name, 'ต้มยำกุ้ง');
+  });
+
+  test('บรรทัดเงินทอนที่เว้นวรรคทุกตัวอักษร ต้องถูกข้าม ไม่กลายเป็นรายการอาหารราคา 151', () => {
+    const text = ['ต้มยำกุ้ง 180.00', 'เง ิ น ท อ น 151.00'].join('\n');
+    const { items } = parseReceiptLines(text);
+    assert.equal(items.length, 1);
+    assert.equal(items[0].name, 'ต้มยำกุ้ง');
+  });
+
+  test('ไม่กระทบ pattern ที่มี \\b word boundary (VAT ติดกับตัวเลข) — ยังจับ footer ได้ปกติ', () => {
+    const { footerTotals } = parseReceiptLines('VAT 34.65');
+    assert.equal(footerTotals.vat, 34.65);
+  });
+
+  test('"รวมมูลค่า" (คำที่ POS บางระบบใช้แทน "ยอดรวม") ต้องถูกจัดเป็น total', () => {
+    const { footerTotals } = parseReceiptLines('รวมมูลค่า 849.00');
+    assert.equal(footerTotals.total, 849);
+  });
+});
+
+describe('computeOtsuThreshold — คำนวณ threshold สำหรับ binarize รูปก่อนเข้า OCR', () => {
+  test('histogram แยก 2 กลุ่มชัดเจน (มืดมาก/สว่างมาก) ต้องได้ threshold อยู่ระหว่างสองกลุ่ม', () => {
+    const histogram = new Array(256).fill(0);
+    histogram[20] = 500; // กลุ่มมืด (ตัวอักษร)
+    histogram[230] = 500; // กลุ่มสว่าง (พื้นหลังกระดาษ)
+    const threshold = computeOtsuThreshold(histogram);
+    // ไม่มีพิกเซลอยู่ระหว่าง 2 กลุ่มเลย จึงถือว่าจุดใดก็ได้ในช่วง [20, 230) แยกกลุ่มได้ถูกต้องเท่ากัน
+    assert.ok(threshold >= 20 && threshold < 230, `threshold ${threshold} ควรอยู่ในช่วง 20-230`);
+  });
+
+  test('histogram ที่ทุกพิกเซลมีค่าเท่ากันหมด (ภาพสีเดียว) ต้องไม่พัง/ไม่ throw', () => {
+    const histogram = new Array(256).fill(0);
+    histogram[128] = 1000;
+    assert.doesNotThrow(() => computeOtsuThreshold(histogram));
+  });
+
+  test('histogram ว่างเปล่าทั้งหมด (ไม่มีพิกเซลเลย) ต้องไม่พังและคืนค่าเริ่มต้นที่สมเหตุสมผล', () => {
+    const histogram = new Array(256).fill(0);
+    const threshold = computeOtsuThreshold(histogram);
+    assert.ok(Number.isFinite(threshold));
   });
 });

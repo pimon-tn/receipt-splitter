@@ -4,7 +4,7 @@
 
 import { loadBill, saveBill, createEmptyBill, cryptoId } from './storage.js';
 import { recognizeReceiptText, parseReceiptLines } from './ocr.js';
-import { formatMoney } from './splitter.js';
+import { splitEqual, splitItemized, formatMoney } from './splitter.js';
 import * as ui from './ui.js';
 
 let bill = loadBill();
@@ -24,7 +24,16 @@ function renderAll() {
   ui.renderTotals(bill);
   ui.renderPeople(bill, peopleHandlers);
   ui.renderAssignList(bill, assignHandlers);
-  ui.renderSplit(bill, splitMode);
+  ui.renderSplitMode(splitMode);
+  ui.renderSplit(bill, splitMode, splitHandlers);
+  ui.renderStepNav(bill, splitMode);
+}
+
+/** ไปหน้าจอที่ระบุ แล้ววาดผลหารบิลใหม่ถ้าเป็นหน้าสรุป (ยอดอาจเปลี่ยนหลังผู้ใช้แก้ข้อมูล) */
+function goTo(tab) {
+  ui.switchTab(tab);
+  ui.renderStepNav(bill, splitMode);
+  if (ui.getCurrentTab() === 'split') ui.renderSplit(bill, splitMode, splitHandlers);
 }
 
 /* ============ Item handlers ============ */
@@ -52,36 +61,59 @@ function updateRowSum(id) {
   const card = document.querySelector(`#itemsBody .item-card[data-id="${id}"]`);
   if (!card) return;
   const totalEl = card.querySelector('.item-line-total');
-  if (totalEl) {
-    totalEl.textContent = '฿' + (item.qty * item.price).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+  if (totalEl) totalEl.textContent = '฿' + formatMoney(item.qty * item.price);
   // ปุ่ม +/- อ่านค่า item.qty ที่อัปเดตแล้วโดยอัตโนมัติ (อ้างอิง object เดียวกัน) แต่ input ตัวเลขต้อง sync กรณีกดปุ่ม +/-
   const qtyInput = card.querySelector('.item-qty');
   if (qtyInput && document.activeElement !== qtyInput) qtyInput.value = item.qty;
 }
 
-$('#addItemBtn').addEventListener('click', () => {
-  ui.openItemModal();
+/* ============ Landing / navigation ============ */
+
+$('#startBtn').addEventListener('click', () => goTo('scan'));
+
+$('#resumeBtn').addEventListener('click', () => goTo('items'));
+
+$('#backBtn').addEventListener('click', () => goTo(ui.previousTab()));
+
+$('#restartBtn').addEventListener('click', () => startNewBill());
+
+// ปุ่มขั้นตอนบนแถบบน — พาไปหน้าแรกของขั้นตอนนั้น
+document.querySelectorAll('.tab').forEach((btn) => {
+  btn.addEventListener('click', () => goTo(btn.dataset.tab));
+});
+
+// ปุ่มย้อนกลับ/ถัดไปในหน้า — ปลายทางคำนวณตอนคลิกจาก flow ของโหมดปัจจุบัน
+// (ไม่ hard-code ชื่อหน้าไว้ใน HTML เพราะปลายทางของขั้นตอน "แบ่งบิล" เปลี่ยนตามโหมดที่เลือก)
+document.querySelectorAll('.js-nav').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.go === 'next' ? ui.nextTab() : ui.previousTab();
+    if (target) goTo(target);
+  });
+});
+
+// แท็บย่อยถูกสร้างใหม่ทุกครั้งที่ render จึงต้องดักที่ตัวแม่ (event delegation)
+$('#substeps').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-substep]');
+  if (btn) goTo(btn.dataset.substep);
 });
 
 /* ============ เริ่มบิลด้วยตัวเอง (ไม่ต้องสแกน) ============ */
 
 $('#manualStartBtn').addEventListener('click', () => {
-  ui.switchTab('items');
+  goTo('items');
   ui.openItemModal();
 });
 
 /* ============ Popup เพิ่มรายการอาหาร ============ */
+
+$('#addItemBtn').addEventListener('click', () => ui.openItemModal());
+$('#emptyAddItemBtn').addEventListener('click', () => ui.openItemModal());
 
 $('#modalCancelBtn').addEventListener('click', () => ui.closeItemModal());
 $('#modalCloseBtn').addEventListener('click', () => ui.closeItemModal());
 
 $('#itemModalOverlay').addEventListener('click', (e) => {
   if (e.target === $('#itemModalOverlay')) ui.closeItemModal();
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && ui.isItemModalOpen()) ui.closeItemModal();
 });
 
 function submitItemModal() {
@@ -127,6 +159,8 @@ $('#modalSubmitBtn').addEventListener('click', submitItemModal);
   });
 });
 
+/* ============ ค่าใช้จ่ายเพิ่มเติม (VAT / ค่าบริการ) ============ */
+
 $('#vatEnabledInput').addEventListener('change', (e) => {
   bill.settings.vatEnabled = e.target.checked;
   persist();
@@ -170,7 +204,7 @@ const peopleHandlers = {
     if (!person) return;
     person.name = name;
     persist();
-    // อัปเดตชื่อในหน้าระบุคนกิน/สรุปโดยไม่ต้อง re-render ทั้งหมด (กัน cursor กระโดด)
+    // อัปเดตชื่อในหน้าระบุคนกินโดยไม่ต้อง re-render ทั้งหมด (กัน cursor กระโดด)
     ui.renderAssignList(bill, assignHandlers);
   },
   onRemovePerson(id) {
@@ -181,11 +215,14 @@ const peopleHandlers = {
   },
 };
 
-$('#addPersonBtn').addEventListener('click', () => {
+function addPerson() {
   bill.people.push({ id: cryptoId(), name: `คนที่ ${bill.people.length + 1}` });
   persist();
   renderAll();
-});
+}
+
+$('#addPersonBtn').addEventListener('click', addPerson);
+$('#emptyAddPersonBtn').addEventListener('click', addPerson);
 
 $('#clearPeopleBtn').addEventListener('click', () => {
   if (!bill.people.length) return;
@@ -228,31 +265,207 @@ const assignHandlers = {
 document.querySelectorAll('.split-mode__btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     splitMode = btn.dataset.mode;
-    document.querySelectorAll('.split-mode__btn').forEach((b) => b.classList.toggle('is-active', b === btn));
-    ui.renderSplit(bill, splitMode);
+    ui.renderSplitMode(splitMode);
+    ui.renderSplit(bill, splitMode, splitHandlers);
+    // โหมดกำหนดว่า flow มีหน้า "ใครกินอะไร" หรือไม่ — อัปเดตแท็บย่อย/ป้ายปุ่มถัดไปในที่
+    // โดยไม่พาผู้ใช้ออกจากหน้านี้ (เขายังกำลังเลือกอยู่ อาจเปลี่ยนใจได้)
+    ui.renderStepNav(bill, splitMode);
   });
 });
 
-/* ============ Tabs ============ */
+/* ============ หน้าสรุป: แตะที่คน เพื่อดูรายการอาหารที่หาร ============ */
 
-document.querySelectorAll('.tab').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    ui.switchTab(btn.dataset.tab);
-    if (btn.dataset.tab === 'split') ui.renderSplit(bill, splitMode);
-  });
+const splitHandlers = {
+  onSelectPerson(personId) {
+    ui.openPersonSheet(bill, splitMode, personId);
+  },
+};
+
+$('#personSheetCloseBtn').addEventListener('click', () => ui.closeSheet('#personSheetOverlay'));
+$('#personSheetOverlay').addEventListener('click', (e) => {
+  if (e.target === $('#personSheetOverlay')) ui.closeSheet('#personSheetOverlay');
 });
+
+/* ============ Share sheet ============ */
+
+$('#openShareBtn').addEventListener('click', () => {
+  if (bill.people.length === 0 || bill.items.length === 0) {
+    ui.showToast('ต้องมีรายการอาหารและรายชื่อคนก่อน จึงจะแชร์ผลได้');
+    return;
+  }
+  ui.openShareSheet();
+});
+
+$('#shareSheetCloseBtn').addEventListener('click', () => ui.closeSheet('#shareSheetOverlay'));
+$('#shareSheetOverlay').addEventListener('click', (e) => {
+  if (e.target === $('#shareSheetOverlay')) ui.closeSheet('#shareSheetOverlay');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (ui.isItemModalOpen()) ui.closeItemModal();
+  else ui.closeAllOverlays();
+});
+
+$('#shareResultBtn').addEventListener('click', async () => {
+  const text = createShareText();
+  try {
+    if (navigator.share) await navigator.share({ title: 'Receipt Splitter', text });
+    else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+    ui.showToast(navigator.share ? 'เปิดหน้าต่างแชร์แล้ว' : 'คัดลอกสรุปผลแล้ว');
+  } catch (err) {
+    if (err?.name !== 'AbortError') ui.showToast('ยังแชร์ไม่ได้ในเบราว์เซอร์นี้');
+  }
+});
+
+$('#shareLineBtn').addEventListener('click', () => {
+  const url = 'https://line.me/R/msg/text/?' + encodeURIComponent(createShareText());
+  window.open(url, '_blank', 'noopener');
+});
+
+$('#copyResultBtn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard?.writeText(createShareText());
+    ui.showToast('คัดลอกสรุปผลแล้ว');
+  } catch {
+    ui.showToast('ยังคัดลอกไม่ได้ในเบราว์เซอร์นี้');
+  }
+});
+
+$('#downloadImageBtn').addEventListener('click', () => {
+  try {
+    downloadResultImage();
+    ui.showToast('บันทึกรูปสรุปผลแล้ว');
+  } catch (err) {
+    console.error(err);
+    ui.showToast('สร้างรูปภาพไม่สำเร็จในเบราว์เซอร์นี้');
+  }
+});
+
+/** ยอดของแต่ละคนตามโหมดที่เลือกอยู่ (ใช้ทั้งข้อความแชร์และรูปภาพ) */
+function currentSplit() {
+  return splitMode === 'itemized'
+    ? splitItemized(bill.items, bill.people, bill.settings)
+    : splitEqual(bill.items, bill.people, bill.settings);
+}
+
+function createShareText() {
+  const { totals, perPerson } = currentSplit();
+  const lines = [
+    'สรุปหารบิล — Receipt Splitter',
+    `ยอดรวมทั้งหมด ฿${formatMoney(totals.grandTotal)}`,
+    `วิธีหาร: ${splitMode === 'itemized' ? 'หารตามรายการที่กิน' : 'หารเท่ากัน'}`,
+    '',
+    ...perPerson.map((p) => `• ${p.name || 'ไม่มีชื่อ'} ฿${formatMoney(p.amount)}`),
+  ];
+  return lines.join('\n');
+}
+
+/**
+ * วาดสรุปผลลงบน canvas แล้วให้เบราว์เซอร์ดาวน์โหลดเป็นไฟล์ PNG
+ * (วาดเองด้วย canvas API ไม่ต้องพึ่ง library ภายนอก — แอปนี้ทำงานแบบออฟไลน์ได้)
+ */
+function downloadResultImage() {
+  const { totals, perPerson } = currentSplit();
+
+  const scale = 2;
+  const width = 640;
+  const rowHeight = 62;
+  const headHeight = 210;
+  const footHeight = 74;
+  const height = headHeight + perPerson.length * rowHeight + footHeight;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  const body = "600 15px 'IBM Plex Sans Thai', sans-serif";
+
+  ctx.fillStyle = '#f2f4f2';
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(20, 20, width - 40, height - 40);
+
+  ctx.fillStyle = '#237f78';
+  ctx.font = "700 15px 'IBM Plex Sans Thai', sans-serif";
+  ctx.fillText('RECEIPT SPLITTER', 46, 62);
+
+  ctx.fillStyle = '#17314c';
+  ctx.font = "700 24px 'IBM Plex Sans Thai', sans-serif";
+  ctx.fillText('สรุปผลการหารบิล', 46, 98);
+
+  ctx.fillStyle = '#718096';
+  ctx.font = body;
+  ctx.fillText(splitMode === 'itemized' ? 'หารตามรายการที่กิน' : 'หารเท่ากันทุกคน', 46, 124);
+
+  ctx.fillStyle = '#edf5f3';
+  ctx.fillRect(46, 142, width - 92, 52);
+  ctx.fillStyle = '#4a5f78';
+  ctx.font = body;
+  ctx.fillText('ยอดรวมทั้งหมด', 62, 172);
+  ctx.fillStyle = '#12756e';
+  ctx.font = "700 22px 'Space Mono', monospace";
+  ctx.textAlign = 'right';
+  ctx.fillText('฿' + formatMoney(totals.grandTotal), width - 62, 174);
+  ctx.textAlign = 'left';
+
+  perPerson.forEach((person, i) => {
+    const y = headHeight + i * rowHeight;
+    ctx.strokeStyle = '#e3ebe8';
+    ctx.beginPath();
+    ctx.moveTo(46, y + rowHeight - 12);
+    ctx.lineTo(width - 46, y + rowHeight - 12);
+    ctx.stroke();
+
+    ctx.fillStyle = '#17314c';
+    ctx.font = "600 17px 'IBM Plex Sans Thai', sans-serif";
+    ctx.fillText(person.name || 'ไม่มีชื่อ', 46, y + 26);
+
+    ctx.fillStyle = '#12756e';
+    ctx.font = "700 17px 'Space Mono', monospace";
+    ctx.textAlign = 'right';
+    ctx.fillText('฿' + formatMoney(person.amount), width - 46, y + 26);
+    ctx.textAlign = 'left';
+  });
+
+  ctx.fillStyle = '#718096';
+  ctx.font = "500 13px 'IBM Plex Sans Thai', sans-serif";
+  ctx.textAlign = 'center';
+  ctx.fillText('แบ่งกันง่าย ๆ อร่อยไปด้วยกันนะ', width / 2, height - 46);
+  ctx.textAlign = 'left';
+
+  const link = document.createElement('a');
+  link.download = 'receipt-split.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
 
 /* ============ New bill ============ */
 
-$('#newBillBtn').addEventListener('click', () => {
+function startNewBill() {
   if (!confirm('ล้างข้อมูลบิลปัจจุบันทั้งหมด (ยกเว้นรายชื่อคน) และเริ่มใหม่?')) return;
   const keptPeople = bill.people;
   bill = createEmptyBill();
   bill.people = keptPeople;
+  splitMode = 'equal';
   persist();
+  ui.closeAllOverlays();
+  resetScanPanel();
   renderAll();
+  goTo('scan');
   ui.showToast('เริ่มบิลใหม่แล้ว (เก็บรายชื่อคนไว้เหมือนเดิม)');
-});
+}
+
+$('#newBillBtn').addEventListener('click', startNewBill);
+
+function resetScanPanel() {
+  $('#scanPreviewWrap').hidden = true;
+  $('#ocrRawWrap').hidden = true;
+  $('#ocrRawText').value = '';
+  ui.setScanStatus('');
+}
 
 /* ============ Scan / OCR flow ============ */
 
@@ -260,28 +473,23 @@ function handleImageSelected(file) {
   if (!file) return;
 
   const previewWrap = $('#scanPreviewWrap');
-  const preview = $('#scanPreview');
-  preview.src = URL.createObjectURL(file);
+  $('#scanPreview').src = URL.createObjectURL(file);
   previewWrap.hidden = false;
+  $('#ocrRawWrap').hidden = true;
 
-  const statusEl = $('#scanStatus');
-  statusEl.hidden = false;
-  statusEl.textContent = 'กำลังอ่านข้อความจากใบเสร็จ...';
-
-  const ocrRawWrap = $('#ocrRawWrap');
-  ocrRawWrap.hidden = true;
+  ui.setScanStatus('กำลังอ่านใบเสร็จ...', 'loading');
 
   recognizeReceiptText(file, (status, progress) => {
-    statusEl.textContent = `${translateStatus(status)} ${(progress * 100).toFixed(0)}%`;
+    ui.setScanStatus(`${translateStatus(status)} ${(progress * 100).toFixed(0)}%`, 'loading');
   })
     .then((text) => {
-      statusEl.textContent = 'อ่านเสร็จแล้ว ตรวจสอบข้อความก่อนแปลงเป็นรายการด้านล่าง';
+      ui.setScanStatus('อ่านเสร็จแล้ว ตรวจสอบข้อความก่อนแปลงเป็นรายการด้านล่าง', 'ok');
       $('#ocrRawText').value = text.trim();
-      ocrRawWrap.hidden = false;
+      $('#ocrRawWrap').hidden = false;
     })
     .catch((err) => {
       console.error(err);
-      statusEl.textContent = 'อ่านใบเสร็จไม่สำเร็จ ลองถ่ายรูปให้ชัดขึ้น หรือกรอกรายการด้วยตนเองในแท็บ "รายการ"';
+      ui.setScanStatus('ไม่สามารถอ่านใบเสร็จได้ ลองถ่ายภาพใหม่ให้ชัดขึ้น หรือเลือก "เพิ่มรายการเอง"', 'error');
     });
 }
 
@@ -300,12 +508,11 @@ $('#cameraInput').addEventListener('change', (e) => handleImageSelected(e.target
 $('#fileInput').addEventListener('change', (e) => handleImageSelected(e.target.files[0]));
 
 $('#parseBtn').addEventListener('click', () => {
-  const rawText = $('#ocrRawText').value;
-  const result = parseReceiptLines(rawText);
+  const result = parseReceiptLines($('#ocrRawText').value);
   const parsedItems = result.items;
 
   if (parsedItems.length === 0) {
-    ui.showToast('อ่านรายการไม่ได้ ลองแก้ไขข้อความ หรือเพิ่มรายการเองในแท็บ "รายการ"');
+    ui.showToast('อ่านรายการไม่ได้ ลองแก้ไขข้อความ หรือเลือก "เพิ่มรายการเอง"');
     return;
   }
 
@@ -321,7 +528,7 @@ $('#parseBtn').addEventListener('click', () => {
 
   persist();
   renderAll();
-  ui.switchTab('items');
+  goTo('items');
 
   const r = result.reconciliation;
   if (r.checked && !r.matches) {
@@ -347,3 +554,6 @@ if ('serviceWorker' in navigator) {
 /* ============ Boot ============ */
 
 renderAll();
+// มีบิลค้างอยู่จากครั้งก่อน (เก็บใน localStorage) → เสนอให้ทำต่อได้เลย ไม่ต้องเริ่มใหม่
+$('#resumeBtn').hidden = bill.items.length === 0;
+ui.switchTab('landing');

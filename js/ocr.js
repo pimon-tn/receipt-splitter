@@ -4,6 +4,9 @@
 
 /**
  * อ่านข้อความจากไฟล์รูปภาพ
+ * ประมวลผลรูปก่อน (grayscale + binarize ด้วย Otsu's method) เพื่อให้ Tesseract อ่านแม่นขึ้น
+ * แล้วอ่านผ่าน worker ที่ตั้ง PSM/OEM เอง (ไม่ใช้ Tesseract.recognize() ตัวช่วยแบบเดิมที่ deprecate
+ * ไปแล้ว และไม่รองรับการปรับ parameter พวกนี้)
  * @param {File} imageFile
  * @param {(status:string, progress:number)=>void} onProgress
  * @returns {Promise<string>} ข้อความดิบที่อ่านได้
@@ -13,7 +16,20 @@ export async function recognizeReceiptText(imageFile, onProgress) {
     throw new Error('ไม่พบไลบรารี Tesseract.js กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
   }
 
-  const result = await window.Tesseract.recognize(imageFile, 'eng+tha', {
+  let image = imageFile;
+  try {
+    image = await preprocessReceiptImage(imageFile);
+  } catch (err) {
+    // เบราว์เซอร์เก่าบางตัวอาจไม่รองรับ createImageBitmap/canvas API บางส่วน — อ่านรูปต้นฉบับต่อไปได้ ไม่บล็อกฟีเจอร์
+    console.warn('ประมวลผลรูปก่อน OCR ไม่สำเร็จ ใช้รูปต้นฉบับแทน', err);
+  }
+
+  // ค่า enum ตัวเลขจริง (LSTM_ONLY=1, SINGLE_BLOCK=6) ตรงกับที่ Tesseract.js เองใช้ — กันไว้เผื่อ
+  // UMD build ที่โหลดจาก CDN ไม่ได้ expose window.Tesseract.OEM/PSM ให้ใช้ตรง ๆ
+  const oemLstmOnly = window.Tesseract.OEM?.LSTM_ONLY ?? 1;
+  const psmSingleBlock = window.Tesseract.PSM?.SINGLE_BLOCK ?? 6;
+
+  const worker = await window.Tesseract.createWorker('eng+tha', oemLstmOnly, {
     logger: (m) => {
       if (onProgress && m.status) {
         onProgress(m.status, m.progress ?? 0);
@@ -21,7 +37,106 @@ export async function recognizeReceiptText(imageFile, onProgress) {
     },
   });
 
-  return result?.data?.text ?? '';
+  try {
+    // เนื้อหาใบเสร็จเป็นข้อความไหลต่อกันในบล็อกเดียว (ไม่ใช่หน้าเอกสารหลายคอลัมน์จริง) — SINGLE_BLOCK
+    // ช่วยลดปัญหา Tesseract เดา layout ผิดเมื่อรูปเอียง/ไม่ชัด เทียบกับ PSM แบบ AUTO ที่เป็นค่า default
+    await worker.setParameters({ tessedit_pageseg_mode: psmSingleBlock });
+    const result = await worker.recognize(image);
+    return result?.data?.text ?? '';
+  } finally {
+    await worker.terminate();
+  }
+}
+
+/**
+ * ประมวลผลรูปใบเสร็จก่อนส่งเข้า OCR: ขยายรูปที่เล็กเกินไป, แปลง grayscale, binarize (ดำ-ขาวล้วน)
+ * ด้วย threshold ที่คำนวณอัตโนมัติจาก Otsu's method — เป็นขั้นที่ช่วยความแม่นยำของ OCR มากที่สุด
+ * เพราะรูปถ่ายใบเสร็จจากมือถือมักมีปัญหาแสง/contrast/กระดาษซีดจากเครื่องพิมพ์ความร้อน
+ * @param {File} file
+ * @returns {Promise<Blob>}
+ */
+async function preprocessReceiptImage(file) {
+  const bitmap = await createImageBitmap(file);
+
+  // ขยายรูปที่ด้านยาวสุดเล็กเกินไป (ตัวอักษรเตี้ยเกินไป Tesseract อ่านแม่นน้อยกว่า) ไม่ย่อรูปใหญ่ลง
+  const MIN_LONG_SIDE = 1600;
+  const MAX_SCALE = 2;
+  const longSide = Math.max(bitmap.width, bitmap.height);
+  const scale = longSide < MIN_LONG_SIDE ? Math.min(MAX_SCALE, MIN_LONG_SIDE / longSide) : 1;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  binarizeInPlace(imageData.data);
+  ctx.putImageData(imageData, 0, 0);
+
+  return await new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('แปลงรูปเป็น Blob ไม่สำเร็จ'))), 'image/png');
+  });
+}
+
+/** แปลง pixel data (RGBA ต่อเนื่อง) เป็น grayscale แล้ว binarize ด้วย threshold จาก Otsu's method (แก้ไข data ในตำแหน่งเดิม) */
+function binarizeInPlace(data) {
+  const grayscale = new Uint8ClampedArray(data.length / 4);
+  const histogram = new Array(256).fill(0);
+
+  for (let i = 0; i < data.length; i += 4) {
+    // luminance formula มาตรฐาน (ITU-R BT.601)
+    const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    grayscale[i / 4] = gray;
+    histogram[gray]++;
+  }
+
+  const threshold = computeOtsuThreshold(histogram);
+
+  for (let i = 0; i < grayscale.length; i++) {
+    const value = grayscale[i] > threshold ? 255 : 0;
+    const offset = i * 4;
+    data[offset] = data[offset + 1] = data[offset + 2] = value;
+    // ช่อง alpha (data[offset + 3]) ไม่แตะ
+  }
+}
+
+/**
+ * คำนวณ threshold สำหรับแบ่งภาพเป็นดำ-ขาวด้วย Otsu's method (เลือกจุดแบ่งที่ variance ระหว่าง
+ * 2 กลุ่มมากที่สุด) แยกออกมาเป็น pure function ต่างหากเพื่อให้ unit test ได้โดยไม่ต้องพึ่ง canvas/DOM
+ * @param {number[]} histogram อาร์เรย์ 256 ช่อง นับจำนวนพิกเซลของแต่ละค่าความสว่าง (0-255)
+ * @returns {number} threshold (0-255)
+ */
+export function computeOtsuThreshold(histogram) {
+  const total = histogram.reduce((sum, count) => sum + count, 0);
+  if (total === 0) return 128;
+
+  let sumAll = 0;
+  for (let i = 0; i < 256; i++) sumAll += i * histogram[i];
+
+  let sumB = 0;
+  let weightB = 0;
+  let maxVariance = 0;
+  let threshold = 0;
+
+  for (let t = 0; t < 256; t++) {
+    weightB += histogram[t];
+    if (weightB === 0) continue;
+    const weightF = total - weightB;
+    if (weightF === 0) break;
+
+    sumB += t * histogram[t];
+    const meanB = sumB / weightB;
+    const meanF = (sumAll - sumB) / weightF;
+    const variance = weightB * weightF * (meanB - meanF) ** 2;
+
+    if (variance > maxVariance) {
+      maxVariance = variance;
+      threshold = t;
+    }
+  }
+
+  return threshold;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,10 +153,10 @@ export async function recognizeReceiptText(imageFile, onProgress) {
 // ตัวเลขราคาท้ายบรรทัด/ท้ายข้อความ: รองรับ 120, 120.00, 1,200.00
 const PRICE_REGEX = /([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)\s*$/;
 
-// คำที่บ่งบอกว่าบรรทัดนี้เป็นข้อมูลร้าน/โต๊ะ/ที่อยู่ ไม่ใช่รายการอาหาร
+// คำที่บ่งบอกว่าบรรทัดนี้เป็นข้อมูลร้าน/โต๊ะ/ที่อยู่/การชำระเงิน ไม่ใช่รายการอาหาร
 const SKIP_WORDS = [
   'table', 'queue', 'no.', 'tel', 'โทร', 'ที่อยู่', 'โต๊ะ', 'คิว', 'เลขที่',
-  'thank', 'ขอบคุณ', 'receipt', 'ใบเสร็จ',
+  'thank', 'ขอบคุณ', 'receipt', 'ใบเสร็จ', 'เงินสด', 'เงินทอน', 'cash', 'change',
 ];
 
 // รูปแบบบรรทัด "สรุปยอด" ท้ายบิล — เรียงจากเฉพาะเจาะจงมากไปน้อย (matchFooterPattern เช็คตามลำดับนี้)
@@ -50,14 +165,14 @@ const FOOTER_PATTERNS = [
   { key: 'discount', re: /discount|ส่วนลด/i },
   { key: 'serviceCharge', re: /service\s*charge|ค่าบริการ/i },
   { key: 'vat', re: /\bvat\b|ภาษีมูลค่าเพิ่ม|ภาษี/i },
-  { key: 'total', re: /grand\s*total|net\s*total|ยอดสุทธิ|ยอดชำระ|ยอดรวมทั้งสิ้น|รวมทั้งสิ้น|\btotal\b|ยอดรวม/i },
+  { key: 'total', re: /grand\s*total|net\s*total|ยอดสุทธิ|ยอดชำระ|ยอดรวมทั้งสิ้น|รวมทั้งสิ้น|รวมมูลค่า|\btotal\b|ยอดรวม/i },
 ];
 
 // คำในหัวตารางรายการ แยกตามหน้าที่ของคอลัมน์ (ใช้ตอนพยายามยึด header เพื่อ split คอลัมน์)
 const HEADER_KEYWORDS = {
   qty: ['จำนวน', 'ปริมาณ', 'qty', 'quantity'],
   unitPrice: ['หน่วย', 'unit', 'each'],
-  total: ['รวม', 'total', 'จำนวนเงิน', 'sum', 'amount'],
+  total: ['รวม', 'total', 'จำนวนเงิน', 'sum', 'amount', 'amt'],
   price: ['ราคา', 'price', 'บาท'],
   name: ['รายการ', 'ชื่อ', 'สินค้า', 'เมนู', 'description', 'item', 'name', 'product', 'menu'],
 };
@@ -74,15 +189,34 @@ function isDividerLine(line) {
   return dividerChars.length / compact.length >= 0.8;
 }
 
+/**
+ * รวมตัวอักษรไทย 2 ตัวที่มีแต่ช่องว่างคั่นกลับเป็นคำเดิม เช่น "ค ิ ว" -> "คิว"
+ * OCR (โดยเฉพาะ Tesseract อ่านภาษาไทย) มักแทรกช่องว่างระหว่างตัวอักษรไทยแทบทุกตัวเวลาอ่านพลาด
+ * ทำให้ SKIP_WORDS/FOOTER_PATTERNS ที่ match แบบ substring/regex ตรง ๆ ไม่เจอคำเลย
+ * วนซ้ำจนสตริงนิ่ง เพราะ regex เดียวไม่ครอบคลุมโซ่ตัวอักษรที่เว้นวรรคติดกันหลายตัว (overlapping match)
+ * จงใจจำกัดแค่ "ตัวอักษรไทยคั่นด้วยวรรค" ไม่แตะวรรคระหว่างคำอังกฤษ/ตัวเลข เพื่อไม่ทำให้ \b word
+ * boundary ของ pattern อื่น (เช่น /\bvat\b/) พังไปด้วย
+ */
+function collapseThaiCharSpacing(line) {
+  let prev;
+  let result = line;
+  do {
+    prev = result;
+    result = result.replace(/([฀-๿])\s+([฀-๿])/g, '$1$2');
+  } while (result !== prev);
+  return result;
+}
+
 function isSkipLine(line) {
-  const lower = line.toLowerCase();
+  const lower = collapseThaiCharSpacing(line).toLowerCase();
   return SKIP_WORDS.some((w) => lower.includes(w));
 }
 
 /** คืน key ของรูปแบบสรุปยอดที่บรรทัดนี้ตรงกับ (ตามลำดับความเฉพาะเจาะจง) หรือ null ถ้าไม่ตรงเลย */
 function matchFooterPattern(line) {
+  const collapsed = collapseThaiCharSpacing(line);
   for (const pattern of FOOTER_PATTERNS) {
-    if (pattern.re.test(line)) return pattern.key;
+    if (pattern.re.test(collapsed)) return pattern.key;
   }
   return null;
 }
