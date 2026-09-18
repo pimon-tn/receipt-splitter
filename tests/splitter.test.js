@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { calcBillTotals, splitEqual, splitItemized, getConsumptionSummary, formatMoney } from '../js/splitter.js';
 
 // ค่าเริ่มต้นของ settings แบบไม่มี VAT ไม่มีค่าบริการ (baseline)
-const noCharges = { vatEnabled: false, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: false, servicePercent: 10 };
+const noCharges = { vatEnabled: false, vatPercent: 7, serviceEnabled: false, servicePercent: 10 };
 
 const sampleItems = () => [
   { id: 'i1', name: 'ต้มยำกุ้ง', qty: 1, price: 180, consumerIds: ['p1', 'p2'] },
@@ -28,8 +28,8 @@ describe('calcBillTotals', () => {
     assert.equal(t.grandTotal, 300);
   });
 
-  test('VAT แบบ "ยังไม่รวม" (exclusive) + มีค่าบริการ: บวกค่าบริการก่อน แล้วคิด VAT จากยอดที่รวมค่าบริการแล้ว', () => {
-    const settings = { vatEnabled: true, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
+  test('มี VAT และมีค่าบริการ: บวกค่าบริการก่อน แล้วคิด VAT จากยอดที่รวมค่าบริการแล้ว', () => {
+    const settings = { vatEnabled: true, vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
     const t = calcBillTotals(sampleItems(), settings);
     assert.equal(t.subtotal, 300);
     assert.equal(t.serviceAmount, 30); // 10% ของ 300
@@ -38,31 +38,8 @@ describe('calcBillTotals', () => {
     assert.ok(Math.abs(t.grandTotal - 353.1) < 1e-9);
   });
 
-  test('VAT แบบ "รวมแล้ว" (inclusive) ไม่มีค่าบริการ: แยกยอด VAT ออกจากราคาโดยไม่บวกซ้ำ grandTotal เท่ากับ subtotal เดิม', () => {
-    const settings = { vatEnabled: true, vatMode: 'inclusive', vatPercent: 7, serviceEnabled: false, servicePercent: 10 };
-    const t = calcBillTotals(sampleItems(), settings);
-    assert.equal(t.subtotal, 300);
-    assert.equal(t.serviceAmount, 0);
-    // ฐานราคาก่อน VAT = 300 / 1.07
-    assert.ok(Math.abs(t.foodBase - 300 / 1.07) < 1e-9);
-    assert.ok(Math.abs(t.vatAmount - (300 - 300 / 1.07)) < 1e-9);
-    // ยอดสุทธิต้องเท่ากับ 300 เดิม ไม่บวก VAT ซ้ำ
-    assert.ok(Math.abs(t.grandTotal - 300) < 1e-9);
-  });
-
-  test('VAT แบบ "รวมแล้ว" (inclusive) + มีค่าบริการ: ค่าบริการคิดจากฐานก่อน VAT และตัวค่าบริการเองก็โดน VAT ด้วย', () => {
-    const settings = { vatEnabled: true, vatMode: 'inclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
-    const t = calcBillTotals(sampleItems(), settings);
-    const foodBase = 300 / 1.07;
-    const expectedService = foodBase * 0.10;
-    const expectedVatOnService = expectedService * 0.07;
-    assert.ok(Math.abs(t.serviceAmount - expectedService) < 1e-9);
-    // grandTotal = subtotal (300, VAT ของอาหารรวมอยู่แล้ว) + serviceAmount + VAT ของค่าบริการ (ค่าบริการเองก็ถูก VAT ด้วย)
-    assert.ok(Math.abs(t.grandTotal - (300 + expectedService + expectedVatOnService)) < 1e-6);
-  });
-
   test('รายการว่าง (ยังไม่มีอะไรในบิล) ต้องไม่พังและได้ 0 ทุกยอด', () => {
-    const t = calcBillTotals([], { vatEnabled: true, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 });
+    const t = calcBillTotals([], { vatEnabled: true, vatPercent: 7, serviceEnabled: true, servicePercent: 10 });
     assert.equal(t.subtotal, 0);
     assert.equal(t.grandTotal, 0);
   });
@@ -70,7 +47,7 @@ describe('calcBillTotals', () => {
 
 describe('splitEqual', () => {
   test('หารเท่ากันทุกคนได้ค่าเท่ากันเป๊ะ และรวมกันได้ grandTotal', () => {
-    const settings = { vatEnabled: true, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
+    const settings = { vatEnabled: true, vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
     const result = splitEqual(sampleItems(), samplePeople(), settings);
     const amounts = result.perPerson.map((p) => p.amount);
     assert.equal(new Set(amounts).size, 1); // ทุกคนได้เท่ากัน
@@ -109,12 +86,11 @@ describe('splitItemized', () => {
     result.perPerson.forEach((p) => assert.ok(Math.abs(p.amount - 10) < 1e-9));
   });
 
-  test('ผลรวมของยอดที่ปัดเศษแล้วของทุกคนต้องเท่ากับ grandTotal เสมอ ไม่ว่าจะเลือกโหมด VAT แบบไหน', () => {
+  test('ผลรวมของยอดที่ปัดเศษแล้วของทุกคนต้องเท่ากับ grandTotal เสมอ', () => {
     const scenarios = [
       noCharges,
-      { vatEnabled: true, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 },
-      { vatEnabled: true, vatMode: 'inclusive', vatPercent: 7, serviceEnabled: false, servicePercent: 10 },
-      { vatEnabled: true, vatMode: 'inclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 },
+      { vatEnabled: true, vatPercent: 7, serviceEnabled: true, servicePercent: 10 },
+      { vatEnabled: true, vatPercent: 7, serviceEnabled: false, servicePercent: 10 },
     ];
     for (const settings of scenarios) {
       const result = splitItemized(sampleItems(), samplePeople(), settings);
@@ -129,7 +105,7 @@ describe('splitItemized', () => {
   test('สัดส่วนไม่ลงตัว ต้องปัดเศษสตางค์แล้วเกลี่ยเศษให้ผลรวมตรงกับยอดบิลเป๊ะ', () => {
     // ต้มยำ 100 บาท คนกินร่วมกัน 3 คน (ไม่ระบุ consumerIds = ทุกคนกิน) -> 33.33/33.33/33.34
     const items = [{ id: 'i1', name: 'ต้มยำ', qty: 1, price: 100, consumerIds: [] }];
-    const settings = { vatEnabled: true, vatMode: 'exclusive', vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
+    const settings = { vatEnabled: true, vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
     const result = splitItemized(items, samplePeople(), settings);
     const amounts = result.perPerson.map((p) => p.amount);
     const sum = amounts.reduce((a, b) => a + b, 0);

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = __dirname;
+const port = process.env.PORT || 4175;
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -26,4 +27,4 @@ http.createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': mimeTypes[path.extname(filePath)] || 'application/octet-stream' });
     response.end(data);
   });
-}).listen(4174, '127.0.0.1', () => console.log('Preview: http://127.0.0.1:4174/'));
+}).listen(port, '127.0.0.1', () => console.log(`Preview: http://127.0.0.1:${port}/`));

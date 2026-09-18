@@ -15,42 +15,29 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $all = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 /* ---------------- Flow / navigation ----------------
-   โครงสร้างขั้นตอนทั้งหมดอยู่ที่ STEPS ที่เดียว — ทั้งแถบขั้นตอน, แท็บย่อย,
-   ปุ่มย้อนกลับ/ถัดไป และข้อความ "ขั้นตอนที่ N จาก M" ล้วน derive จากตารางนี้
-   (เดิมเก็บเลข step ไว้ในแต่ละ panel + hard-code ข้อความใน HTML ทำให้ 2 หน้า
-   ที่อยู่ขั้นตอนเดียวกันแสดงหัวข้อเหมือนกันเป๊ะ จนแยกไม่ออกว่าเปลี่ยนหน้าแล้ว)
+   โครงสร้างขั้นตอนทั้งหมดอยู่ที่ STEPS ที่เดียว — ทั้งแถบขั้นตอนด้านล่างและแท็บย่อย
+   ล้วน derive จากตารางนี้ ผู้ใช้สลับหน้าโดยแตะแถบขั้นตอน/แท็บย่อยโดยตรง ไม่มีปุ่ม
+   ย้อนกลับ/ถัดไปในตัวหน้าอีกต่อไป
 
    หนึ่งขั้นตอน (step) มีได้หลายหน้าจอ (panel) — หน้าจอในขั้นตอนเดียวกันจะโชว์
-   เป็น "แท็บย่อย" ให้สลับกันได้ และบอกตำแหน่งว่าเป็นหน้าที่เท่าไรของขั้นตอนนั้น
+   เป็น "แท็บย่อย" ให้สลับกันได้
 */
 const STEPS = [
-  { step: 1, label: 'รายการ', panels: ['items', 'charges'] },
-  { step: 2, label: 'คนกิน', panels: ['people'] },
-  { step: 3, label: 'แบ่งบิล', panels: ['method', 'assign'] },
-  { step: 4, label: 'สรุป', panels: ['split'] },
+  { step: 1, panels: ['items', 'charges'] },
+  { step: 2, panels: ['people'] },
+  { step: 3, panels: ['method'] },
+  { step: 4, panels: ['split'] },
 ];
-
-/** หน้าจอที่มีเฉพาะบางโหมดการหาร (ไม่ต้องให้ผู้ใช้ทำถ้าโหมดนั้นไม่ได้ใช้ผลลัพธ์) */
-const MODE_ONLY_PANELS = { assign: 'itemized' };
 
 const PANEL_META = {
   landing: { title: '' },
   scan: { title: 'เริ่มต้นใช้งาน' },
   items: { title: 'รายการอาหาร', subLabel: 'รายการอาหาร' },
-  charges: { title: 'ค่าใช้จ่ายเพิ่มเติม', subLabel: 'ค่าใช้จ่าย' },
+  charges: { title: 'ค่าใช้จ่ายเพิ่มเติม', subLabel: 'ภาษีและค่าบริการ' },
   people: { title: 'คนที่ร่วมกิน' },
   method: { title: 'เลือกวิธีแบ่งค่าใช้จ่าย', subLabel: 'วิธีหารบิล' },
-  assign: { title: 'ใครกินอะไร', subLabel: 'ใครกินอะไร' },
   split: { title: 'สรุปผลการหารบิล' },
 };
-
-const TOTAL_STEPS = STEPS.length;
-
-/* ไอคอนลูกศรของปุ่มนำทาง — path มาจาก Material Icons ธีม Rounded ของ MUI
-   (ArrowBackIosRounded / ArrowForwardIosRounded) ฝัง SVG ไว้ในโค้ดตรง ๆ
-   ไม่โหลดจาก CDN เพราะแอปนี้ต้องทำงานแบบออฟไลน์ได้ */
-const ICON_BACK = '<span class="material-icons-round btn__ico" aria-hidden="true">chevron_left</span>';
-const ICON_NEXT = '<span class="material-icons-round btn__ico" aria-hidden="true">chevron_right</span>';
 
 let currentTab = 'landing';
 // โหมดการหารที่เลือกอยู่ เก็บเป็น view state เพราะมันกำหนดว่า flow มีหน้า assign หรือไม่
@@ -61,33 +48,19 @@ export function getCurrentTab() {
   return currentTab;
 }
 
-/** หน้าจอของขั้นตอนหนึ่ง ตัดหน้าที่โหมดปัจจุบันไม่ได้ใช้ออก */
-function stepPanels(step, mode = currentMode) {
+/** หน้าจอของขั้นตอนหนึ่ง */
+function stepPanels(step) {
   const group = STEPS.find((s) => s.step === step);
-  if (!group) return [];
-  return group.panels.filter((p) => !MODE_ONLY_PANELS[p] || MODE_ONLY_PANELS[p] === mode);
+  return group ? group.panels : [];
 }
 
-/** ลำดับหน้าจอทั้งหมดของโหมดนั้น ๆ (ใช้คำนวณปุ่มย้อนกลับ/ถัดไป) */
-function flowFor(mode = currentMode) {
-  return ['landing', 'scan', ...STEPS.flatMap((s) => stepPanels(s.step, mode))];
+/** ลำดับหน้าจอทั้งหมด (ใช้กันไม่ให้ switchTab พาไปหน้าที่ไม่มีอยู่จริง) */
+function flowFor() {
+  return ['landing', 'scan', ...STEPS.flatMap((s) => stepPanels(s.step))];
 }
 
 function stepOf(panelName) {
   return STEPS.find((s) => s.panels.includes(panelName))?.step ?? 0;
-}
-
-/** หน้าจอก่อนหน้า/ถัดไปใน flow ของโหมดปัจจุบัน (undefined = ไม่มีหน้าถัดไป) */
-export function previousTab(tabName = currentTab) {
-  const flow = flowFor();
-  const idx = flow.indexOf(tabName);
-  return idx > 0 ? flow[idx - 1] : 'landing';
-}
-
-export function nextTab(tabName = currentTab) {
-  const flow = flowFor();
-  const idx = flow.indexOf(tabName);
-  return idx >= 0 ? flow[idx + 1] : undefined;
 }
 
 export function switchTab(tabName) {
@@ -120,7 +93,6 @@ export function switchTab(tabName) {
   const isLanding = target === 'landing';
   $('#appbar').hidden = isLanding;
   $('.app-foot').hidden = isLanding;
-  $('#appbarTitle').textContent = meta.title;
 
   // เปลี่ยนหน้าแล้วต้องเริ่มอ่านจากด้านบนเสมอ
   // (บนจอใหญ่ตัว .app เป็น scroll container เอง จึงต้องรีเซ็ตทั้งสองที่)
@@ -129,102 +101,29 @@ export function switchTab(tabName) {
   if (app) app.scrollTop = 0;
 }
 
-/* ---------------- Step nav: แท็บย่อย + eyebrow + ป้ายปุ่มนำทาง ----------------
+/* ---------------- Step nav: แท็บย่อย ----------------
    เรียกทุกครั้งที่เปลี่ยนหน้า เปลี่ยนโหมดการหาร หรือข้อมูลบิลเปลี่ยน
-   เพื่อให้ผู้ใช้เห็นตลอดว่า "อยู่ขั้นตอนไหน / หน้าที่เท่าไรของขั้นตอน / หน้าต่อไปคืออะไร"
 */
-export function renderStepNav(bill, mode = currentMode) {
+export function renderStepNav(mode = currentMode) {
   currentMode = mode;
 
   const step = stepOf(currentTab);
   const panels = stepPanels(step);
   const bar = $('#substeps');
-  const activePanel = $(`.panel[data-panel="${currentTab}"]`);
 
   // --- แท็บย่อย: โชว์เฉพาะขั้นตอนที่มีมากกว่า 1 หน้า ---
   bar.innerHTML = '';
   bar.hidden = panels.length < 2;
   if (!bar.hidden) {
-    panels.forEach((name, i) => {
+    panels.forEach((name) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'substep' + (name === currentTab ? ' is-active' : '');
       btn.dataset.substep = name;
       btn.setAttribute('aria-current', name === currentTab ? 'page' : 'false');
-      btn.innerHTML = `<span class="substep__num" aria-hidden="true">${i + 1}</span>${escapeHtml(PANEL_META[name].subLabel || PANEL_META[name].title)}`;
+      btn.textContent = PANEL_META[name].subLabel || PANEL_META[name].title;
       bar.appendChild(btn);
     });
-  }
-
-  if (!activePanel || step === 0) return;
-
-  // --- eyebrow: ขั้นตอนที่ N จาก 4 · ชื่อขั้นตอน (หน้าที่ i จาก n) ---
-  const eyebrow = $('.eyebrow', activePanel);
-  if (eyebrow) {
-    const label = STEPS.find((s) => s.step === step)?.label ?? '';
-    const pos = panels.length > 1 ? ` (${panels.indexOf(currentTab) + 1}/${panels.length})` : '';
-    eyebrow.textContent = `ขั้นตอนที่ ${step} จาก ${TOTAL_STEPS} · ${label}${pos}`;
-  }
-
-  // --- บรรทัดสรุปบริบทที่ยกมาจากขั้นตอนก่อน ---
-  const recap = $('.panel-recap', activePanel);
-  if (recap) {
-    const text = recapFor(currentTab, bill);
-    recap.textContent = text;
-    recap.hidden = !text;
-  }
-
-  // --- ปุ่มนำทาง: แสดงเป็นไอคอนลูกศรเท่านั้น ไม่มีข้อความ ---
-  // ชื่อหน้าปลายทางย้ายไปอยู่ใน aria-label/title แทน เพื่อให้ screen reader
-  // และการชี้ค้าง (tooltip) ยังบอกได้ว่าปุ่มนี้พาไปไหน
-  const prev = previousTab();
-  const next = nextTab();
-  const backBtn = $('[data-go="back"]', activePanel);
-  const nextBtn = $('[data-go="next"]', activePanel);
-  if (backBtn) {
-    const label = prev && PANEL_META[prev]?.title ? `ย้อนกลับ: ${PANEL_META[prev].title}` : 'ย้อนกลับ';
-    backBtn.innerHTML = ICON_BACK;
-    backBtn.setAttribute('aria-label', label);
-    backBtn.setAttribute('title', label);
-  }
-  if (nextBtn) {
-    nextBtn.hidden = !next;
-    if (next) {
-      const label = nextLabel(next);
-      nextBtn.innerHTML = ICON_NEXT;
-      nextBtn.setAttribute('aria-label', label);
-      nextBtn.setAttribute('title', label);
-    }
-  }
-}
-
-/** ชื่อที่ใช้บอกปลายทางของปุ่มถัดไป (ไม่แสดงบนจอ ใช้กับ aria-label/tooltip) */
-function nextLabel(next) {
-  if (next === 'split') return 'ดูสรุปผล';
-  return `ถัดไป: ${PANEL_META[next]?.title || ''}`;
-}
-
-/**
- * บรรทัดสรุปสิ่งที่ทำมาแล้ว แสดงบนหัวของหน้าถัด ๆ ไป
- * ช่วยให้รู้ว่า "กำลังทำอะไรอยู่บนข้อมูลชุดไหน" ไม่ใช่แค่รู้ว่าอยู่หน้าไหน
- */
-function recapFor(panelName, bill) {
-  if (!bill) return '';
-  const totals = calcBillTotals(bill.items, bill.settings);
-  const itemCount = bill.items.length;
-  const peopleCount = bill.people.length;
-
-  switch (panelName) {
-    case 'charges':
-      return `รายการอาหาร ${itemCount} อย่าง · ฿${formatMoney(totals.subtotal)}`;
-    case 'people':
-      return `ยอดบิลรวม ฿${formatMoney(totals.grandTotal)} · ${itemCount} รายการ`;
-    case 'method':
-      return `${peopleCount} คน · ยอดรวม ฿${formatMoney(totals.grandTotal)}`;
-    case 'assign':
-      return `${peopleCount} คน · ${itemCount} รายการ`;
-    default:
-      return '';
   }
 }
 
@@ -263,24 +162,21 @@ export function renderItems(bill, handlers) {
     card.dataset.id = item.id;
 
     card.innerHTML = `
-      <div class="item-card__row1">
-        <input type="text" class="item-name" value="${escapeHtml(item.name)}" placeholder="ชื่อรายการ เช่น ต้มยำกุ้ง">
-        <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}"><span class="material-icons-round" aria-hidden="true">delete_outline</span></button>
+      <button type="button" class="item-main" aria-label="แก้ไขรายการ ${escapeHtml(item.name)}">
+        <span class="item-name">${escapeHtml(item.name)}</span>
+        <span class="item-price">฿${formatMoney(item.qty * item.price)}</span>
+      </button>
+      <div class="qty-stepper">
+        <button type="button" class="qty-btn qty-btn--minus" aria-label="ลดจำนวน"><i class="uicon fi-br-minus" aria-hidden="true"></i></button>
+        <span class="item-qty" aria-label="จำนวน">${item.qty}</span>
+        <button type="button" class="qty-btn qty-btn--plus" aria-label="เพิ่มจำนวน"><i class="uicon fi-br-add" aria-hidden="true"></i></button>
       </div>
-      <div class="item-card__row2">
-        <div class="qty-stepper">
-          <button type="button" class="qty-btn qty-btn--minus" aria-label="ลดจำนวน"><span class="material-icons-round" aria-hidden="true">remove</span></button>
-          <input type="number" class="item-qty" min="1" step="1" value="${item.qty}" aria-label="จำนวน">
-          <button type="button" class="qty-btn qty-btn--plus" aria-label="เพิ่มจำนวน"><span class="material-icons-round" aria-hidden="true">add</span></button>
-        </div>
-        <label class="price-field"><span>฿</span><input type="number" class="item-price" min="0" step="0.01" value="${item.price}" aria-label="ราคาต่อหน่วย"></label>
-        <span class="item-line-total" aria-label="ยอดรวมรายการ">฿${formatMoney(item.qty * item.price)}</span>
-      </div>
+      <button type="button" class="row-edit" aria-label="แก้ไขรายการ ${escapeHtml(item.name)}"><i class="uicon fi-br-edit" aria-hidden="true"></i></button>
+      <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}"><i class="uicon fi-br-trash-xmark" aria-hidden="true"></i></button>
     `;
 
-    $('.item-name', card).addEventListener('input', (e) => handlers.onUpdateItem(item.id, { name: e.target.value }));
-    $('.item-qty', card).addEventListener('input', (e) => handlers.onUpdateItem(item.id, { qty: clampNumber(e.target.value, 1) }));
-    $('.item-price', card).addEventListener('input', (e) => handlers.onUpdateItem(item.id, { price: clampNumber(e.target.value, 0) }));
+    $('.item-main', card).addEventListener('click', () => handlers.onEditItem(item.id));
+    $('.row-edit', card).addEventListener('click', () => handlers.onEditItem(item.id));
     $('.row-del', card).addEventListener('click', () => handlers.onRemoveItem(item.id));
     $('.qty-btn--minus', card).addEventListener('click', () => handlers.onUpdateItem(item.id, { qty: Math.max(1, item.qty - 1) }));
     $('.qty-btn--plus', card).addEventListener('click', () => handlers.onUpdateItem(item.id, { qty: item.qty + 1 }));
@@ -291,33 +187,28 @@ export function renderItems(bill, handlers) {
 
 export function renderTotals(bill) {
   const totals = calcBillTotals(bill.items, bill.settings);
+  const { vatEnabled, vatPercent, serviceEnabled, servicePercent } = bill.settings;
+
   $('#itemsSubtotal').textContent = '฿' + formatMoney(totals.subtotal);
   $('#sumSubtotal').textContent = formatMoney(totals.subtotal);
   $('#sumService').textContent = formatMoney(totals.serviceAmount);
   $('#sumVat').textContent = formatMoney(totals.vatAmount);
   $('#sumGrand').textContent = formatMoney(totals.grandTotal);
 
-  const isInclusive = bill.settings.vatEnabled && bill.settings.vatMode === 'inclusive';
-  $('#lblSubtotal').textContent = isInclusive ? 'ค่าอาหาร (รวม VAT แล้ว)' : 'ค่าอาหาร';
-  $('#lblVat').textContent = !bill.settings.vatEnabled
-    ? 'ภาษี VAT (ไม่มี)'
-    : isInclusive ? 'VAT ที่รวมอยู่ในราคาแล้ว' : 'ภาษี VAT (บวกเพิ่ม)';
+  $('#lblSubtotal').textContent = 'ค่าอาหาร';
+  $('#lblVat').textContent = vatEnabled ? `ภาษีมูลค่าเพิ่ม (${vatPercent}%)` : 'ภาษีมูลค่าเพิ่ม (ไม่มี)';
+  $('#lblService').textContent = serviceEnabled ? `ค่าบริการ (${servicePercent}%)` : 'ค่าบริการ (ไม่มี)';
 }
 
 /* ---------------- Charge settings (VAT / service) ---------------- */
 
 export function renderChargeSettings(bill) {
-  const { vatEnabled, vatMode, vatPercent, serviceEnabled, servicePercent } = bill.settings;
+  const { vatEnabled, vatPercent, serviceEnabled, servicePercent } = bill.settings;
 
   $('#vatEnabledInput').checked = vatEnabled;
-  $('#vatSubOptions').hidden = !vatEnabled;
   $('#vatPercentInput').value = vatPercent;
-  $all('.segmented__btn', $('#vatModeSegmented')).forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.vatmode === vatMode);
-  });
 
   $('#serviceEnabledInput').checked = serviceEnabled;
-  $('#serviceSubOptions').hidden = !serviceEnabled;
   $('#servicePercentInput').value = servicePercent;
 }
 
@@ -335,7 +226,7 @@ export function renderPeople(bill, handlers) {
     li.innerHTML = `
       <span class="avatar" data-tone="${toneOf(index)}">${getInitial(person.name)}</span>
       <input type="text" class="person-name" value="${escapeHtml(person.name)}" placeholder="ชื่อคน">
-      <button type="button" class="row-del" aria-label="ลบ ${escapeHtml(person.name)}"><span class="material-icons-round" aria-hidden="true">close</span></button>
+      <button type="button" class="row-del" aria-label="ลบ ${escapeHtml(person.name)}"><i class="uicon fi-br-trash-xmark" aria-hidden="true"></i></button>
     `;
     $('.person-name', li).addEventListener('input', (e) => {
       handlers.onUpdatePerson(person.id, e.target.value);
@@ -357,7 +248,7 @@ export function renderAssignList(bill, handlers) {
     warn.hidden = true;
     wrap.innerHTML = `
       <div class="empty-state">
-        <span class="empty-state__icon material-icons-round" aria-hidden="true">restaurant</span>
+        <i class="empty-state__icon uicon fi-br-restaurant" aria-hidden="true"></i>
         <p class="empty-state__title">ยังระบุคนกินไม่ได้</p>
         <p class="empty-state__desc">ต้องมีทั้งรายการอาหารและรายชื่อคนก่อน</p>
       </div>`;
@@ -419,13 +310,17 @@ export function renderSplitMode(mode) {
     btn.setAttribute('aria-checked', active ? 'true' : 'false');
   });
 
-  // บอกให้ชัดว่าตัวเลือกนี้ทำให้ต้องทำอะไรต่อ (หารตามรายการ = มีงานเพิ่มอีก 1 หน้า)
+  // บอกให้ชัดว่าตัวเลือกนี้ทำให้ต้องทำอะไรต่อ (หารตามรายการ = ต้องระบุใครกินอะไรด้านล่างนี้ก่อน)
   const note = $('#methodNextNote');
   if (note) {
     note.textContent = mode === 'itemized'
-      ? 'ขั้นตอนถัดไป: ระบุว่าใครกินอะไร แล้วจึงดูสรุปผล'
+      ? 'ระบุว่าใครกินอะไรด้านล่าง แล้วดูสรุปผลได้เลย'
       : 'ขั้นตอนถัดไป: ดูสรุปผลได้เลย ไม่ต้องระบุว่าใครกินอะไร';
   }
+
+  // โหมดหารตามรายการที่กิน: โชว์ส่วน "ใครกินอะไร" ต่อในหน้าเดียวกันเลย ไม่ต้องสลับแท็บ
+  const assignSection = $('#assignSection');
+  if (assignSection) assignSection.hidden = mode !== 'itemized';
 }
 
 /* ---------------- Split results ---------------- */
@@ -435,33 +330,44 @@ const MAX_CHIPS = 10;
 
 export function renderSplit(bill, mode, handlers = {}) {
   const wrap = $('#splitResult');
+  const resultMain = wrap.closest('.result-main');
+  const hint = $('#splitHint');
   wrap.innerHTML = '';
 
   if (bill.people.length === 0 || bill.items.length === 0) {
     const missingPeople = bill.people.length === 0;
+    if (resultMain) resultMain.hidden = false;
+    if (hint) hint.textContent = 'แตะที่ชื่อแต่ละคน เพื่อดูรายการอาหารที่หารและยอดของแต่ละรายการ';
     wrap.innerHTML = `
       <div class="empty-state">
-        <span class="empty-state__icon material-icons-round" aria-hidden="true">${missingPeople ? 'person_add' : 'restaurant'}</span>
+        <i class="empty-state__icon uicon ${missingPeople ? 'fi-br-user-add' : 'fi-br-restaurant'}" aria-hidden="true"></i>
         <p class="empty-state__title">${missingPeople ? 'ยังไม่มีรายชื่อคนกิน' : 'ยังไม่มีรายการอาหาร'}</p>
         <p class="empty-state__desc">${missingPeople ? 'เพิ่มรายชื่อคนกินก่อน จึงจะหารบิลได้' : 'เพิ่มรายการอาหารก่อน จึงจะหารบิลได้'}</p>
       </div>`;
-    renderSummaryPanel(bill, []);
+    renderSummaryPanel(bill, [], mode);
     return;
   }
 
   const result = computeSplit(bill, mode);
+
+  // หารเท่ากัน: ทุกคนจ่ายเท่ากันอยู่แล้ว โชว์แค่การ์ดยอดรวมด้านบนพอ ไม่ต้องมีรายละเอียดต่อคนให้กดดู
+  if (mode === 'equal') {
+    if (resultMain) resultMain.hidden = true;
+    if (hint) hint.textContent = 'หารเท่ากันทุกคน ดูยอดที่ต้องจ่ายได้จากการ์ดด้านบน';
+    renderSummaryPanel(bill, result.perPerson, mode);
+    return;
+  }
+
+  if (resultMain) resultMain.hidden = false;
+  if (hint) hint.textContent = 'แตะชื่อเพื่อดูยอดของแต่ละรายการ หรือแตะลูกศรเพื่อดูรายการอาหารที่หาร';
+
   const consumption = getConsumptionSummary(bill.items, bill.people);
 
   result.perPerson.forEach((p, index) => {
-    const card = document.createElement('button');
-    card.type = 'button';
+    const name = p.name || 'ไม่มีชื่อ';
+    const card = document.createElement('div');
     card.className = 'split-card';
     card.dataset.personId = p.personId;
-    card.setAttribute('aria-label', `ดูรายการอาหารของ ${p.name || 'ไม่มีชื่อ'}`);
-
-    const sub = mode === 'itemized'
-      ? `ค่าอาหาร ฿${formatMoney(p.subtotal)} + ส่วนแบ่งค่าบริการ/ภาษี`
-      : 'หารเท่ากันทุกคน';
 
     const items = consumption.get(p.personId) || [];
     const shown = items.slice(0, MAX_CHIPS);
@@ -472,25 +378,40 @@ export function renderSplit(bill, mode, handlers = {}) {
       : '<span class="split-card__item-chip split-card__item-chip--more">ไม่ได้กินอะไรเลย</span>';
 
     card.innerHTML = `
-      <span class="avatar avatar--lg" data-tone="${toneOf(index)}" aria-hidden="true">${getInitial(p.name)}</span>
-      <span class="split-card__info">
-        <span class="split-card__name">${escapeHtml(p.name || 'ไม่มีชื่อ')}</span>
-        <span class="split-card__sub">${sub}</span>
-        <span class="split-card__items">${chips}</span>
-      </span>
-      <span class="split-card__end">
-        <span class="split-card__amount">฿${formatMoney(p.amount)}</span>
-        <span class="split-card__chev" aria-hidden="true">&rsaquo;</span>
-      </span>
+      <div class="split-card__row">
+        <button type="button" class="split-card__main" aria-label="ดูยอดของ ${escapeHtml(name)}">
+          <span class="avatar avatar--lg" data-tone="${toneOf(index)}" aria-hidden="true">${getInitial(p.name)}</span>
+          <span class="split-card__name">${escapeHtml(name)}</span>
+          <span class="split-card__amount">฿${formatMoney(p.amount)}</span>
+        </button>
+        <button type="button" class="split-card__expand-btn" aria-expanded="false" aria-label="ดูรายการอาหารของ ${escapeHtml(name)}">
+          <i class="uicon fi-br-angle-down" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="split-card__detail" hidden>
+        <span class="split-card__sub">ค่าอาหาร ฿${formatMoney(p.subtotal)} + ส่วนแบ่งค่าบริการ/ภาษี</span>
+        <div class="split-card__items">${chips}</div>
+      </div>
     `;
 
+    const mainBtn = card.querySelector('.split-card__main');
+    const expandBtn = card.querySelector('.split-card__expand-btn');
+    const detail = card.querySelector('.split-card__detail');
+
     if (handlers.onSelectPerson) {
-      card.addEventListener('click', () => handlers.onSelectPerson(p.personId));
+      mainBtn.addEventListener('click', () => handlers.onSelectPerson(p.personId));
     }
+    expandBtn.addEventListener('click', () => {
+      const expanded = expandBtn.getAttribute('aria-expanded') === 'true';
+      expandBtn.setAttribute('aria-expanded', String(!expanded));
+      expandBtn.classList.toggle('is-expanded', !expanded);
+      detail.hidden = expanded;
+    });
+
     wrap.appendChild(card);
   });
 
-  renderSummaryPanel(bill, result.perPerson);
+  renderSummaryPanel(bill, result.perPerson, mode);
 }
 
 /** เรียกตัวคำนวณตามโหมดที่เลือก (ใช้ร่วมกันระหว่างการ์ดสรุปและ sheet รายละเอียด) */
@@ -500,7 +421,7 @@ function computeSplit(bill, mode) {
     : splitEqual(bill.items, bill.people, bill.settings);
 }
 
-function renderSummaryPanel(bill, perPerson) {
+function renderSummaryPanel(bill, perPerson, mode) {
   const panel = $('#summaryPanel');
   if (!panel) return;
 
@@ -510,9 +431,13 @@ function renderSummaryPanel(bill, perPerson) {
   const matches = perPerson.length > 0
     && Math.round(sumOfPeople * 100) === Math.round(totals.grandTotal * 100);
 
+  // หารไม่เท่ากัน: การ์ดนี้โชว์แค่ยอดรวม รายชื่อรายคนไปอยู่ในการ์ดด้านล่างแทน (กดขยายดูได้)
+  const showPeopleList = mode !== 'itemized';
+
   panel.innerHTML = `
     <p class="summary-panel__label">ยอดรวมทั้งหมด</p>
     <strong class="summary-panel__total">฿${formatMoney(totals.grandTotal)}</strong>
+    ${showPeopleList ? `
     <div class="summary-panel__people">
       ${perPerson.length
         ? perPerson.map((person, index) => `
@@ -522,9 +447,9 @@ function renderSummaryPanel(bill, perPerson) {
             <strong>฿${formatMoney(person.amount)}</strong>
           </div>`).join('')
         : '<p class="summary-empty">เพิ่มรายการและรายชื่อเพื่อดูยอดสรุป</p>'}
-    </div>
+    </div>` : ''}
     ${matches
-      ? '<div class="summary-note"><span class="material-icons-round" aria-hidden="true">check_circle</span><span>ยอดของทุกคนรวมกันตรงกับยอดบิลแล้ว<small>เยี่ยมเลย!</small></span></div>'
+      ? '<div class="summary-note"><i class="uicon fi-br-check-circle" aria-hidden="true"></i><span>ยอดของทุกคนรวมกันตรงกับยอดบิลแล้ว</span></div>'
       : ''}
   `;
 }
@@ -575,12 +500,11 @@ export function openPersonSheet(bill, mode, personId) {
       </div>
     </div>
 
-    <div class="person-total"><span>ยอดที่ต้องจ่าย</span><strong>฿${formatMoney(row.amount)}</strong></div>
+    <div class="person-breakdown">${breakdown}</div>
 
-    <p class="field-label"><span class="material-icons-round inline-icon" aria-hidden="true">restaurant</span> รายการที่หาร <span class="items-count">${items.length} รายการ</span></p>
+    <p class="field-label"><i class="uicon fi-br-restaurant inline-icon" aria-hidden="true"></i> รายการที่หาร <span class="items-count">${items.length} รายการ</span></p>
     <div class="person-items">${itemsHtml}</div>
 
-    <div class="person-breakdown">${breakdown}</div>
     ${mode === 'equal'
       ? '<p class="assign-item__note">โหมดหารเท่ากันไม่คิดตามรายการที่กิน รายการด้านบนแสดงไว้ให้ดูอ้างอิงเท่านั้น</p>'
       : ''}
@@ -616,15 +540,28 @@ export function closeAllOverlays() {
   document.body.style.overflow = '';
 }
 
-export function openItemModal() {
+export function openItemModal(item) {
+  const overlay = $('#itemModalOverlay');
   const nameInput = $('#modalItemName');
   const qtyInput = $('#modalItemQty');
   const priceInput = $('#modalItemPrice');
 
-  nameInput.value = '';
+  if (item) {
+    overlay.dataset.editingId = item.id;
+    $('#itemModalTitle').innerHTML = '<i class="uicon fi-br-restaurant inline-icon" aria-hidden="true"></i> แก้ไขรายการอาหาร';
+    $('#modalSubmitBtn').textContent = 'บันทึกการแก้ไข';
+    nameInput.value = item.name;
+    qtyInput.value = item.qty;
+    priceInput.value = item.price;
+  } else {
+    delete overlay.dataset.editingId;
+    $('#itemModalTitle').innerHTML = '<i class="uicon fi-br-restaurant inline-icon" aria-hidden="true"></i> เพิ่มรายการอาหาร';
+    $('#modalSubmitBtn').textContent = '+ เพิ่มรายการ';
+    nameInput.value = '';
+    qtyInput.value = '1';
+    priceInput.value = '';
+  }
   nameInput.removeAttribute('aria-invalid');
-  qtyInput.value = '1';
-  priceInput.value = '';
   priceInput.removeAttribute('aria-invalid');
 
   openSheet('#itemModalOverlay');
@@ -633,10 +570,15 @@ export function openItemModal() {
 
 export function closeItemModal() {
   closeSheet('#itemModalOverlay');
+  delete $('#itemModalOverlay').dataset.editingId;
 }
 
 export function isItemModalOpen() {
   return !$('#itemModalOverlay').hidden;
+}
+
+export function getEditingItemId() {
+  return $('#itemModalOverlay').dataset.editingId || null;
 }
 
 /* ---------------- Helpers ---------------- */
@@ -644,12 +586,6 @@ export function isItemModalOpen() {
 /** สีประจำคน วนซ้ำใน 8 โทน — ใช้ช่วยจำ ไม่ได้ใช้สื่อความหมายเพียงอย่างเดียว */
 function toneOf(index) {
   return index % 8;
-}
-
-function clampNumber(value, min) {
-  const n = parseFloat(value);
-  if (!isFinite(n)) return min;
-  return Math.max(min, n);
 }
 
 function getInitial(name) {

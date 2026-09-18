@@ -60,7 +60,6 @@ describe('saveBill / loadBill', () => {
     bill.items.push({ id: 'i1', name: 'ต้มยำ', qty: 1, price: 180, consumerIds: [] });
     bill.people.push({ id: 'p1', name: 'เอ' });
     bill.settings.vatEnabled = true;
-    bill.settings.vatMode = 'inclusive';
 
     saveBill(bill);
     const loaded = loadBill();
@@ -69,7 +68,6 @@ describe('saveBill / loadBill', () => {
     assert.equal(loaded.items[0].name, 'ต้มยำ');
     assert.equal(loaded.people[0].name, 'เอ');
     assert.equal(loaded.settings.vatEnabled, true);
-    assert.equal(loaded.settings.vatMode, 'inclusive');
   });
 
   test('ยังไม่มีข้อมูลบันทึกไว้เลย ต้องได้บิลเปล่าเริ่มต้น ไม่ throw', () => {
@@ -95,7 +93,6 @@ describe('saveBill / loadBill', () => {
 
     const loaded = loadBill();
     assert.equal(loaded.settings.vatEnabled, true);
-    assert.equal(loaded.settings.vatMode, 'exclusive');
     assert.equal(loaded.settings.vatPercent, 7);
     assert.equal(loaded.settings.serviceEnabled, true);
     assert.equal(loaded.settings.servicePercent, 10);

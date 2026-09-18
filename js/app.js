@@ -26,13 +26,13 @@ function renderAll() {
   ui.renderAssignList(bill, assignHandlers);
   ui.renderSplitMode(splitMode);
   ui.renderSplit(bill, splitMode, splitHandlers);
-  ui.renderStepNav(bill, splitMode);
+  ui.renderStepNav(splitMode);
 }
 
 /** ไปหน้าจอที่ระบุ แล้ววาดผลหารบิลใหม่ถ้าเป็นหน้าสรุป (ยอดอาจเปลี่ยนหลังผู้ใช้แก้ข้อมูล) */
 function goTo(tab) {
   ui.switchTab(tab);
-  ui.renderStepNav(bill, splitMode);
+  ui.renderStepNav(splitMode);
   if (ui.getCurrentTab() === 'split') ui.renderSplit(bill, splitMode, splitHandlers);
 }
 
@@ -45,26 +45,30 @@ const itemHandlers = {
     Object.assign(item, patch);
     persist();
     ui.renderTotals(bill);
-    // อัปเดตแค่ยอดรวมแถวโดยไม่ re-render ทั้งตาราง เพื่อไม่ให้ cursor กระโดดตอนพิมพ์
-    updateRowSum(id);
+    // อัปเดตแค่แถวนี้โดยไม่ re-render ทั้งตาราง เพื่อไม่ให้เสียตำแหน่ง scroll
+    updateRowQty(id);
   },
   onRemoveItem(id) {
     bill.items = bill.items.filter((it) => it.id !== id);
     persist();
     renderAll();
   },
+  onEditItem(id) {
+    const item = bill.items.find((it) => it.id === id);
+    if (!item) return;
+    ui.openItemModal(item);
+  },
 };
 
-function updateRowSum(id) {
+function updateRowQty(id) {
   const item = bill.items.find((it) => it.id === id);
   if (!item) return;
   const card = document.querySelector(`#itemsBody .item-card[data-id="${id}"]`);
   if (!card) return;
-  const totalEl = card.querySelector('.item-line-total');
-  if (totalEl) totalEl.textContent = '฿' + formatMoney(item.qty * item.price);
-  // ปุ่ม +/- อ่านค่า item.qty ที่อัปเดตแล้วโดยอัตโนมัติ (อ้างอิง object เดียวกัน) แต่ input ตัวเลขต้อง sync กรณีกดปุ่ม +/-
-  const qtyInput = card.querySelector('.item-qty');
-  if (qtyInput && document.activeElement !== qtyInput) qtyInput.value = item.qty;
+  const qtyEl = card.querySelector('.item-qty');
+  if (qtyEl) qtyEl.textContent = item.qty;
+  const priceEl = card.querySelector('.item-price');
+  if (priceEl) priceEl.textContent = '฿' + formatMoney(item.qty * item.price);
 }
 
 /* ============ Landing / navigation ============ */
@@ -73,22 +77,11 @@ $('#startBtn').addEventListener('click', () => goTo('scan'));
 
 $('#resumeBtn').addEventListener('click', () => goTo('items'));
 
-$('#backBtn').addEventListener('click', () => goTo(ui.previousTab()));
-
 $('#restartBtn').addEventListener('click', () => startNewBill());
 
 // ปุ่มขั้นตอนบนแถบบน — พาไปหน้าแรกของขั้นตอนนั้น
 document.querySelectorAll('.tab').forEach((btn) => {
   btn.addEventListener('click', () => goTo(btn.dataset.tab));
-});
-
-// ปุ่มย้อนกลับ/ถัดไปในหน้า — ปลายทางคำนวณตอนคลิกจาก flow ของโหมดปัจจุบัน
-// (ไม่ hard-code ชื่อหน้าไว้ใน HTML เพราะปลายทางของขั้นตอน "แบ่งบิล" เปลี่ยนตามโหมดที่เลือก)
-document.querySelectorAll('.js-nav').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const target = btn.dataset.go === 'next' ? ui.nextTab() : ui.previousTab();
-    if (target) goTo(target);
-  });
 });
 
 // แท็บย่อยถูกสร้างใหม่ทุกครั้งที่ render จึงต้องดักที่ตัวแม่ (event delegation)
@@ -139,11 +132,21 @@ function submitItemModal() {
 
   const qty = Math.max(1, parseInt($('#modalItemQty').value, 10) || 1);
 
-  bill.items.push({ id: cryptoId(), name, qty, price, consumerIds: [] });
+  const editingId = ui.getEditingItemId();
+  if (editingId) {
+    const item = bill.items.find((it) => it.id === editingId);
+    if (item) {
+      Object.assign(item, { name, qty, price });
+      ui.showToast(`แก้ไข "${name}" แล้ว`);
+    }
+  } else {
+    bill.items.push({ id: cryptoId(), name, qty, price, consumerIds: [] });
+    ui.showToast(`เพิ่ม "${name}" แล้ว`);
+  }
+
   ui.closeItemModal();
   persist();
   renderAll();
-  ui.showToast(`เพิ่ม "${name}" แล้ว`);
 }
 
 $('#modalSubmitBtn').addEventListener('click', submitItemModal);
@@ -166,15 +169,6 @@ $('#vatEnabledInput').addEventListener('change', (e) => {
   persist();
   ui.renderChargeSettings(bill);
   ui.renderTotals(bill);
-});
-
-document.querySelectorAll('#vatModeSegmented .segmented__btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    bill.settings.vatMode = btn.dataset.vatmode;
-    persist();
-    ui.renderChargeSettings(bill);
-    ui.renderTotals(bill);
-  });
 });
 
 $('#vatPercentInput').addEventListener('input', (e) => {
@@ -269,7 +263,7 @@ document.querySelectorAll('.split-mode__btn').forEach((btn) => {
     ui.renderSplit(bill, splitMode, splitHandlers);
     // โหมดกำหนดว่า flow มีหน้า "ใครกินอะไร" หรือไม่ — อัปเดตแท็บย่อย/ป้ายปุ่มถัดไปในที่
     // โดยไม่พาผู้ใช้ออกจากหน้านี้ (เขายังกำลังเลือกอยู่ อาจเปลี่ยนใจได้)
-    ui.renderStepNav(bill, splitMode);
+    ui.renderStepNav(splitMode);
   });
 });
 

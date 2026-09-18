@@ -13,7 +13,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-bold-rounded/css/uicons-bold-rounded.css">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -26,7 +27,7 @@
   <!-- ===== App bar (ซ่อนบนหน้า Landing) ===== -->
   <header class="appbar" id="appbar" hidden>
     <div class="hero__brand">
-        <span class="hero__badge material-icons-round" aria-hidden="true">receipt_long</span>
+        <i class="hero__badge uicon fi-br-receipt" aria-hidden="true"></i>
         <div>
           <p class="hero__name">Receipt Splitter</p>
           <p class="hero__tag">Good Food, Greater Together</p>
@@ -38,16 +39,16 @@
   <!-- ===== Step indicator (ขั้นตอนที่ 1-4) ===== -->
   <nav class="steps" id="tabs" role="tablist" aria-label="ขั้นตอนการหารบิล" hidden>
     <button class="tab" data-tab="items" role="tab" aria-selected="false">
-      <span class="tab__icon material-icons-round" aria-hidden="true">receipt_long</span><span class="tab__label">รายการ</span>
+      <i class="tab__icon uicon fi-br-receipt" aria-hidden="true"></i><span class="tab__label">รายการ</span>
     </button>
     <button class="tab" data-tab="people" role="tab" aria-selected="false">
-      <span class="tab__icon material-icons-round" aria-hidden="true">person</span><span class="tab__label">คนกิน</span>
+      <i class="tab__icon uicon fi-br-user" aria-hidden="true"></i><span class="tab__label">คนกิน</span>
     </button>
     <button class="tab" data-tab="method" role="tab" aria-selected="false">
-      <span class="tab__icon material-icons-round" aria-hidden="true">calculate</span><span class="tab__label">แบ่งบิล</span>
+      <i class="tab__icon uicon fi-br-calculator" aria-hidden="true"></i><span class="tab__label">หารบิล</span>
     </button>
     <button class="tab" data-tab="split" role="tab" aria-selected="false">
-      <span class="tab__icon material-icons-round" aria-hidden="true">summarize</span><span class="tab__label">สรุป</span>
+      <i class="tab__icon uicon fi-br-list-check" aria-hidden="true"></i><span class="tab__label">สรุป</span>
     </button>
   </nav>
 
@@ -64,7 +65,7 @@
   <section class="panel panel--landing" data-panel="landing" id="panel-landing">
     <div class="hero">
       <div class="hero__brand">
-        <span class="hero__badge material-icons-round" aria-hidden="true">receipt_long</span>
+        <i class="hero__badge uicon fi-br-receipt" aria-hidden="true"></i>
         <div>
           <p class="hero__name">Receipt Splitter</p>
           <p class="hero__tag">Good Food, Greater Together</p>
@@ -80,9 +81,9 @@
       </div>
 
       <ul class="hero__perks">
-        <li><span class="material-icons-round" aria-hidden="true">check_circle</span> ใช้งานง่าย</li>
-        <li><span class="material-icons-round" aria-hidden="true">check_circle</span> ไม่ต้องสมัคร</li>
-        <li><span class="material-icons-round" aria-hidden="true">verified_user</span> ข้อมูลอยู่บนอุปกรณ์</li>
+        <li><i class="uicon fi-br-check-circle" aria-hidden="true"></i> ใช้งานง่าย</li>
+        <li><i class="uicon fi-br-check-circle" aria-hidden="true"></i> ไม่ต้องสมัคร</li>
+        <li><i class="uicon fi-br-shield-check" aria-hidden="true"></i> ข้อมูลอยู่บนอุปกรณ์</li>
       </ul>
     </div>
   </section>
@@ -96,7 +97,7 @@
 
     <div class="start-choice">
       <label class="start-card" for="cameraInput">
-        <span class="start-card__icon material-icons-round" aria-hidden="true">photo_camera</span>
+        <i class="start-card__icon uicon fi-br-camera" aria-hidden="true"></i>
         <span class="start-card__body">
           <span class="start-card__title">สแกนใบเสร็จ</span>
           <span class="start-card__desc">ถ่ายรูป แล้วดึงรายการอัตโนมัติ</span>
@@ -106,7 +107,7 @@
       </label>
 
       <button class="start-card" id="manualStartBtn" type="button">
-        <span class="start-card__icon material-icons-round" aria-hidden="true">edit_note</span>
+        <i class="start-card__icon uicon fi-br-edit-alt" aria-hidden="true"></i>
         <span class="start-card__body">
           <span class="start-card__title">เพิ่มรายการเอง</span>
           <span class="start-card__desc">ไม่มีใบเสร็จก็เริ่มได้ พิมพ์รายการด้วยตัวเอง</span>
@@ -115,7 +116,7 @@
       </button>
 
       <label class="start-card" for="fileInput">
-        <span class="start-card__icon material-icons-round" aria-hidden="true">image</span>
+        <i class="start-card__icon uicon fi-br-picture" aria-hidden="true"></i>
         <span class="start-card__body">
           <span class="start-card__title">นำเข้ารูปภาพ</span>
           <span class="start-card__desc">เลือกรูปใบเสร็จจากคลังภาพ</span>
@@ -134,27 +135,24 @@
     <div id="ocrRawWrap" class="ocr-raw" hidden>
       <p class="field-label">ข้อความที่อ่านได้ <span class="field-label__hint">แก้ไขได้ก่อนแปลงเป็นรายการ</span></p>
       <textarea id="ocrRawText" rows="8" spellcheck="false"></textarea>
-      <button class="btn btn--primary btn--big" id="parseBtn" type="button"><span class="material-icons-round" aria-hidden="true">auto_awesome</span> แปลงเป็นรายการ &rarr;</button>
+      <button class="btn btn--primary btn--big" id="parseBtn" type="button"><i class="uicon fi-br-magic-wand" aria-hidden="true"></i> แปลงเป็นรายการ &rarr;</button>
     </div>
   </section>
 
   <!-- ===== 3. รายการอาหาร ===== -->
   <section class="panel" data-panel="items" id="panel-items" hidden>
     <div class="section-heading">
-      <p class="eyebrow"></p>
-      <h2 class="page-title">รายการอาหาร</h2>
+      <div class="section-row section-row--title">
+        <h2 class="page-title">รายการอาหาร <span class="items-count" id="itemsCount">0 รายการ</span></h2>
+        <button class="btn btn--tiny" id="addItemBtn" type="button">＋ เพิ่มรายการ</button>
+      </div>
       <p class="panel__hint">ตรวจสอบและแก้ไขรายการอาหารให้ตรงกับใบเสร็จ</p>
-    </div>
-
-    <div class="section-row">
-      <p class="field-label"><span class="material-icons-round inline-icon" aria-hidden="true">restaurant</span> รายการ <span class="items-count" id="itemsCount">0 รายการ</span></p>
-      <button class="btn btn--tiny" id="addItemBtn" type="button">＋ เพิ่มรายการ</button>
     </div>
 
     <div class="items-list" id="itemsBody"></div>
 
     <div class="empty-state" id="itemsEmptyHint" hidden>
-      <span class="empty-state__icon material-icons-round" aria-hidden="true">post_add</span>
+      <i class="empty-state__icon uicon fi-br-add-document" aria-hidden="true"></i>
       <p class="empty-state__title">ยังไม่มีรายการอาหาร</p>
       <p class="empty-state__desc">เพิ่มรายการแรกเพื่อเริ่มหารบิล</p>
       <button class="btn btn--primary btn--small" id="emptyAddItemBtn" type="button">＋ เพิ่มรายการ</button>
@@ -165,83 +163,61 @@
       <strong id="itemsSubtotal">฿0.00</strong>
     </div>
 
-    <div class="flow-actions">
-      <button class="btn btn--ghost btn--icon js-nav" data-go="back" type="button" aria-label="ย้อนกลับ"></button>
-      <button class="btn btn--primary btn--icon js-nav" data-go="next" type="button" aria-label="ถัดไป"></button>
-    </div>
   </section>
 
   <!-- ===== 4. ค่าใช้จ่ายเพิ่มเติม ===== -->
   <section class="panel" data-panel="charges" id="panel-charges" hidden>
     <div class="section-heading">
-      <p class="eyebrow"></p>
-      <h2 class="page-title">ค่าใช้จ่ายเพิ่มเติม</h2>
-      <p class="panel__hint">เปิดเฉพาะรายการที่มีอยู่จริงบนใบเสร็จ ยอดรวมจะอัปเดตให้ทันที</p>
-      <p class="panel-recap" hidden></p>
+      <h2 class="page-title">คำนวณค่าภาษีและค่าบริการ</h2>
     </div>
 
     <div class="charges">
       <div class="setting-block">
         <label class="toggle-row">
-          <span class="toggle-row__label"><span class="material-icons-round inline-icon" aria-hidden="true">calculate</span> ภาษีมูลค่าเพิ่ม (VAT)</span>
-          <span class="switch">
-            <input type="checkbox" id="vatEnabledInput">
-            <span class="switch__track"><span class="switch__thumb"></span></span>
+          <span class="toggle-row__label"><i class="uicon fi-br-calculator inline-icon" aria-hidden="true"></i> ภาษีมูลค่าเพิ่ม (VAT)</span>
+          <span class="toggle-row__right">
+            <span class="charge-input"><input type="number" id="vatPercentInput" min="0" step="0.5" value="7"> %</span>
+            <span class="switch">
+              <input type="checkbox" id="vatEnabledInput">
+              <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
           </span>
         </label>
-        <div class="setting-sub" id="vatSubOptions" hidden>
-          <div class="segmented" id="vatModeSegmented">
-            <button type="button" class="segmented__btn" data-vatmode="exclusive">ราคายังไม่รวม VAT</button>
-            <button type="button" class="segmented__btn" data-vatmode="inclusive">ราคารวม VAT แล้ว</button>
-          </div>
-          <label class="charge-row">
-            <span>อัตรา VAT</span>
-            <span class="charge-input"><input type="number" id="vatPercentInput" min="0" step="0.5" value="7"> %</span>
-          </label>
-        </div>
       </div>
 
       <div class="setting-block">
         <label class="toggle-row">
-          <span class="toggle-row__label"><span class="material-icons-round inline-icon" aria-hidden="true">room_service</span> ค่าบริการ (Service charge)</span>
-          <span class="switch">
-            <input type="checkbox" id="serviceEnabledInput">
-            <span class="switch__track"><span class="switch__thumb"></span></span>
+          <span class="toggle-row__label"><i class="uicon fi-br-concierge-bell inline-icon" aria-hidden="true"></i> ค่าบริการ (Service charge)</span>
+          <span class="toggle-row__right">
+            <span class="charge-input"><input type="number" id="servicePercentInput" min="0" step="0.5" value="10"> %</span>
+            <span class="switch">
+              <input type="checkbox" id="serviceEnabledInput">
+              <span class="switch__track"><span class="switch__thumb"></span></span>
+            </span>
           </span>
         </label>
-        <div class="setting-sub" id="serviceSubOptions" hidden>
-          <label class="charge-row">
-            <span>อัตราค่าบริการ</span>
-            <span class="charge-input"><input type="number" id="servicePercentInput" min="0" step="0.5" value="10"> %</span>
-          </label>
-        </div>
       </div>
     </div>
 
     <div class="totals-box">
+      <p class="totals-box__title">สรุปค่าใช้จ่าย</p>
       <div class="totals-row"><span id="lblSubtotal">ค่าอาหาร</span><span id="sumSubtotal">0.00</span></div>
-      <div class="totals-row"><span>ค่าบริการ</span><span id="sumService">0.00</span></div>
-      <div class="totals-row"><span id="lblVat">ภาษี VAT</span><span id="sumVat">0.00</span></div>
-      <div class="totals-row totals-row--grand"><span>ยอดรวมทั้งบิล</span><span id="sumGrand">0.00</span></div>
+      <div class="totals-row"><span id="lblService">ค่าบริการ</span><span id="sumService">0.00</span></div>
+      <div class="totals-row"><span id="lblVat">ภาษีมูลค่าเพิ่ม</span><span id="sumVat">0.00</span></div>
+      <div class="totals-row totals-row--grand"><span>รวมทั้งหมด</span><span id="sumGrand">0.00</span></div>
     </div>
 
-    <div class="flow-actions">
-      <button class="btn btn--ghost btn--icon js-nav" data-go="back" type="button" aria-label="ย้อนกลับ"></button>
-      <button class="btn btn--primary btn--icon js-nav" data-go="next" type="button" aria-label="ถัดไป"></button>
-    </div>
   </section>
 
   <!-- ===== 5. คนที่ร่วมกิน ===== -->
   <section class="panel" data-panel="people" id="panel-people" hidden>
     <div class="section-heading">
-      <p class="eyebrow"></p>
       <h2 class="page-title">คนที่ร่วมกิน</h2>
       <p class="panel__hint">ใครร่วมโต๊ะนี้บ้าง? แตะที่ชื่อเพื่อแก้ไขได้เลย</p>
-      <p class="panel-recap" hidden></p>
     </div>
 
     <div class="section-row">
-      <p class="field-label"><span class="material-icons-round inline-icon" aria-hidden="true">group</span> รายชื่อ <span class="items-count" id="peopleCount">0 คน</span></p>
+      <p class="field-label"><i class="uicon fi-br-users inline-icon" aria-hidden="true"></i> รายชื่อ <span class="items-count" id="peopleCount">0 คน</span></p>
       <div class="section-actions">
         <button class="btn btn--ghost btn--tiny" id="clearPeopleBtn" type="button" hidden>ล้างรายชื่อ</button>
         <button class="btn btn--tiny" id="addPersonBtn" type="button">＋ เพิ่มคน</button>
@@ -251,76 +227,56 @@
     <ul class="people-list" id="peopleList"></ul>
 
     <div class="empty-state" id="peopleEmptyHint" hidden>
-      <span class="empty-state__icon material-icons-round" aria-hidden="true">person_add</span>
+      <i class="empty-state__icon uicon fi-br-user-add" aria-hidden="true"></i>
       <p class="empty-state__title">ยังไม่มีรายชื่อ</p>
       <p class="empty-state__desc">เพิ่มเพื่อนร่วมโต๊ะเพื่อเริ่มหารบิล</p>
       <button class="btn btn--primary btn--small" id="emptyAddPersonBtn" type="button">＋ เพิ่มคน</button>
     </div>
 
-    <div class="flow-actions">
-      <button class="btn btn--ghost btn--icon js-nav" data-go="back" type="button" aria-label="ย้อนกลับ"></button>
-      <button class="btn btn--primary btn--icon js-nav" data-go="next" type="button" aria-label="ถัดไป"></button>
-    </div>
   </section>
 
-  <!-- ===== 6. เลือกวิธีหารบิล ===== -->
+  <!-- ===== 6. เลือกวิธีหารบิล + ใครกินอะไร (โชว์ต่อในหน้าเดียวกันเมื่อเลือกหารตามรายการที่กิน) ===== -->
   <section class="panel" data-panel="method" id="panel-method" hidden>
     <div class="section-heading">
-      <p class="eyebrow"></p>
       <h2 class="page-title">เลือกวิธีแบ่งค่าใช้จ่าย</h2>
       <p class="panel__hint">เลือกวิธีที่เหมาะกับรายการอาหารของคุณ</p>
-      <p class="panel-recap" hidden></p>
     </div>
 
     <div class="split-mode" role="radiogroup" aria-label="เลือกวิธีหารบิล">
       <button class="split-mode__btn is-active" data-mode="equal" type="button" role="radio" aria-checked="true">
-        <span class="split-mode__icon material-icons-round" aria-hidden="true">balance</span>
+        <span class="split-mode__check" aria-hidden="true"></span>
+        <i class="split-mode__icon fi fi-sr-users" aria-hidden="true"></i>
         <span class="split-mode__name">หารเท่ากัน</span>
-        <span class="split-mode__desc">ทุกคนจ่ายเท่ากัน ไม่สนใจว่าใครกินอะไร</span>
-        <span class="split-mode__pick">เลือก</span>
+        <span class="split-mode__desc">ทุกคนจ่ายเท่ากัน ง่ายและรวดเร็ว</span>
       </button>
       <button class="split-mode__btn" data-mode="itemized" type="button" role="radio" aria-checked="false">
-        <span class="split-mode__icon material-icons-round" aria-hidden="true">format_list_bulleted</span>
+        <span class="split-mode__check" aria-hidden="true"></span>
+        <i class="split-mode__icon fi fi-br-utensils" aria-hidden="true"></i>
         <span class="split-mode__name">หารตามรายการที่กิน</span>
-        <span class="split-mode__desc">แต่ละคนจ่ายตามรายการที่ตัวเองกิน ค่าบริการและ VAT เกลี่ยตามสัดส่วน</span>
-        <span class="split-mode__pick">เลือก</span>
+        <span class="split-mode__desc">แต่ละคนจ่ายตามรายการที่ตัวเองกิน</span>
       </button>
     </div>
 
     <p class="state-note state--info" id="methodNextNote"></p>
 
-    <div class="flow-actions">
-      <button class="btn btn--ghost btn--icon js-nav" data-go="back" type="button" aria-label="ย้อนกลับ"></button>
-      <button class="btn btn--primary btn--icon js-nav" data-go="next" type="button" aria-label="ดูสรุปผล"></button>
-    </div>
-  </section>
+    <div id="assignSection" class="assign-section" hidden>
+      <div class="section-heading">
+        <h2 class="page-title">เลือกคนที่กินแต่ละรายการ</h2>
+      </div>
 
-  <!-- ===== 7. ใครกินอะไร (เฉพาะโหมดหารตามรายการที่กิน) ===== -->
-  <section class="panel" data-panel="assign" id="panel-assign" hidden>
-    <div class="section-heading">
-      <p class="eyebrow"></p>
-      <h2 class="page-title">ใครกินอะไร</h2>
-      <p class="panel__hint">แตะชื่อในแต่ละรายการเพื่อระบุคนกิน &mdash; ถ้าไม่เลือกใครเลย ระบบจะหารรายการนั้นให้ทุกคนเท่า ๆ กัน</p>
-      <p class="panel-recap" hidden></p>
+      <div class="state-note state--warn" id="assignWarn" hidden></div>
+
+      <div id="assignList" class="assign-list"></div>
     </div>
 
-    <div class="state-note state--warn" id="assignWarn" hidden></div>
-
-    <div id="assignList" class="assign-list"></div>
-
-    <div class="flow-actions">
-      <button class="btn btn--ghost btn--icon js-nav" data-go="back" type="button" aria-label="ย้อนกลับ"></button>
-      <button class="btn btn--primary btn--icon js-nav" data-go="next" type="button" aria-label="ถัดไป"></button>
-    </div>
   </section>
 
 
   <!-- ===== 8. สรุปผลการหารบิล ===== -->
   <section class="panel" data-panel="split" id="panel-split" hidden>
     <div class="section-heading">
-      <p class="eyebrow"></p>
       <h2 class="page-title">สรุปผลการหารบิล</h2>
-      <p class="panel__hint">แตะที่ชื่อแต่ละคน เพื่อดูรายการอาหารที่หารและยอดของแต่ละรายการ</p>
+      <p class="panel__hint" id="splitHint">แตะที่ชื่อแต่ละคน เพื่อดูรายการอาหารที่หารและยอดของแต่ละรายการ</p>
     </div>
 
     <div class="result-layout">
@@ -331,15 +287,15 @@
     </div>
 
     <div class="flow-actions">
-      <button class="btn btn--ghost btn--icon js-nav" data-go="back" type="button" aria-label="ย้อนกลับ"></button>
-      <button class="btn btn--primary" id="openShareBtn" type="button"><span class="material-icons-round" aria-hidden="true">share</span> แชร์ผลลัพธ์</button>
+      <button class="btn btn--primary" id="openShareBtn" type="button"><i class="uicon fi-br-share" aria-hidden="true"></i> แชร์ผลลัพธ์</button>
     </div>
   </section>
 
   </main>
 
   <footer class="app-foot">
-    <p class="foot-note"><span class="material-icons-round inline-icon" aria-hidden="true">lock</span> ข้อมูลทั้งหมดเก็บไว้ในอุปกรณ์ของคุณเท่านั้น ไม่มีการส่งขึ้นเซิร์ฟเวอร์</p>
+    <p class="foot-note"><i class="uicon fi-br-lock inline-icon" aria-hidden="true"></i> ข้อมูลทั้งหมดเก็บไว้ในอุปกรณ์ของคุณเท่านั้น ไม่มีการส่งขึ้นเซิร์ฟเวอร์</p>
+    <p class="foot-credit">Icons by <a href="https://www.flaticon.com/uicons" title="Flaticon" target="_blank" rel="noopener">Flaticon</a></p>
   </footer>
 </div>
 
@@ -349,7 +305,7 @@
 <div id="itemModalOverlay" class="modal-overlay" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
     <div class="modal__header">
-      <p class="modal__title" id="itemModalTitle"><span class="material-icons-round inline-icon" aria-hidden="true">restaurant</span> เพิ่มรายการอาหาร</p>
+      <p class="modal__title" id="itemModalTitle"><i class="uicon fi-br-restaurant inline-icon" aria-hidden="true"></i> เพิ่มรายการอาหาร</p>
       <button class="modal__close" id="modalCloseBtn" type="button" aria-label="ปิดหน้าต่างเพิ่มรายการ">&times;</button>
     </div>
 
@@ -392,17 +348,17 @@
     <button class="sheet__close" id="shareSheetCloseBtn" type="button" aria-label="ปิดหน้าต่างแชร์">&times;</button>
     <div class="sheet__body">
       <div class="share-head">
-        <span class="share-head__icon material-icons-round" aria-hidden="true">check</span>
+        <i class="share-head__icon uicon fi-br-check" aria-hidden="true"></i>
         <p class="share-head__title" id="shareSheetTitle">พร้อมส่งแล้ว!</p>
         <p class="share-head__desc">แชร์ผลลัพธ์ให้เพื่อนได้เลย</p>
       </div>
       <div class="share-actions">
-        <button class="btn btn--primary btn--big" id="shareResultBtn" type="button"><span class="material-icons-round" aria-hidden="true">share</span> แชร์ผลลัพธ์</button>
+        <button class="btn btn--primary btn--big" id="shareResultBtn" type="button"><i class="uicon fi-br-share" aria-hidden="true"></i> แชร์ผลลัพธ์</button>
         <button class="btn btn--ghost btn--big" id="shareLineBtn" type="button">💬 แชร์ผ่าน LINE</button>
         <button class="btn btn--ghost btn--big" id="copyResultBtn" type="button">🔗 คัดลอกสรุป</button>
-        <button class="btn btn--ghost btn--big" id="downloadImageBtn" type="button"><span class="material-icons-round" aria-hidden="true">download</span> ดาวน์โหลดรูปภาพ</button>
+        <button class="btn btn--ghost btn--big" id="downloadImageBtn" type="button"><i class="uicon fi-br-download" aria-hidden="true"></i> ดาวน์โหลดรูปภาพ</button>
       </div>
-      <button class="btn btn--text" id="newBillBtn" type="button"><span class="material-icons-round" aria-hidden="true">restart_alt</span> เริ่มบิลใหม่</button>
+      <button class="btn btn--text" id="newBillBtn" type="button"><i class="uicon fi-br-refresh" aria-hidden="true"></i> เริ่มบิลใหม่</button>
     </div>
   </div>
 </div>

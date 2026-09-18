@@ -13,7 +13,6 @@ export function createEmptyBill() {
     people: [],
     settings: {
       vatEnabled: false,
-      vatMode: 'exclusive', // 'exclusive' = ราคายังไม่รวม VAT (บวกเพิ่ม) | 'inclusive' = ราคารวม VAT แล้ว (แยกให้)
       vatPercent: 7,
       serviceEnabled: false,
       servicePercent: 10,
@@ -33,14 +32,12 @@ export function loadBill() {
     const settings = isLegacy
       ? {
           vatEnabled: (s.vatPercent || 0) > 0,
-          vatMode: 'exclusive',
           vatPercent: s.vatPercent || 7,
           serviceEnabled: (s.serviceChargePercent || 0) > 0,
           servicePercent: s.serviceChargePercent || 10,
         }
       : {
           vatEnabled: s.vatEnabled ?? false,
-          vatMode: s.vatMode === 'inclusive' ? 'inclusive' : 'exclusive',
           vatPercent: s.vatPercent ?? 7,
           serviceEnabled: s.serviceEnabled ?? false,
           servicePercent: s.servicePercent ?? 10,

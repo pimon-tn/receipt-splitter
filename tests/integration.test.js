@@ -86,14 +86,14 @@ describe('การใช้งานจริงทั้งวงจร: เ�
 
     let itemCards = $$('#itemsBody .item-card');
     assert.equal(itemCards.length, 2, 'ควรมี 2 รายการหลังแปลงข้อความ OCR');
-    assert.equal(itemCards[0].querySelector('.item-name').value, 'ต้มยำกุ้ง');
-    assert.equal(itemCards[1].querySelector('.item-qty').value, '2');
+    assert.equal(itemCards[0].querySelector('.item-name').textContent, 'ต้มยำกุ้ง');
+    assert.equal(itemCards[1].querySelector('.item-qty').textContent, '2');
 
     // ---- แท็บรายการ: เพิ่มรายการเองอีก 1 รายการผ่าน popup ----
     addItemViaModal({ name: 'น้ำเปล่า', qty: 1, price: 20 });
     itemCards = $$('#itemsBody .item-card');
     assert.equal(itemCards.length, 3);
-    assert.equal(itemCards[2].querySelector('.item-name').value, 'น้ำเปล่า');
+    assert.equal(itemCards[2].querySelector('.item-name').textContent, 'น้ำเปล่า');
 
     // ---- แท็บคนกิน: เพิ่ม 2 คน ----
     click($('#addPersonBtn'));
@@ -103,9 +103,8 @@ describe('การใช้งานจริงทั้งวงจร: เ�
     setValue(peopleRows[0].querySelector('.person-name'), 'เอ');
     setValue(peopleRows[1].querySelector('.person-name'), 'บี');
 
-    // ---- เปิด VAT (ยังไม่รวม 7%) และเปิดค่าบริการ 10% ----
+    // ---- เปิด VAT 7% และเปิดค่าบริการ 10% ----
     setChecked($('#vatEnabledInput'), true);
-    click($('#vatModeSegmented [data-vatmode="exclusive"]'));
     setValue($('#vatPercentInput'), '7');
     setChecked($('#serviceEnabledInput'), true);
     setValue($('#servicePercentInput'), '10');
@@ -117,16 +116,16 @@ describe('การใช้งานจริงทั้งวงจร: เ�
     assert.equal($('#sumVat').textContent, '24.64');
     assert.equal($('#sumGrand').textContent, '376.64');
 
-    // ---- แท็บหารบิล โหมด "หารเท่ากัน" ----
+    // ---- แท็บหารบิล โหมด "หารเท่ากัน" (โชว์แค่การ์ดยอดรวม ไม่มีการ์ดรายคนให้กด) ----
     click($('.tab[data-tab="split"]'));
-    let splitCards = $$('#splitResult .split-card');
-    assert.equal(splitCards.length, 2);
-    let amounts = splitCards.map((c) => c.querySelector('.split-card__amount').textContent);
+    assert.equal($$('#splitResult .split-card').length, 0, 'หารเท่ากันไม่ต้องมีการ์ดรายคนให้กดขยาย');
+    let amounts = $$('#summaryPanel .summary-person strong').map((el) => el.textContent);
     assert.deepEqual(amounts, ['฿188.32', '฿188.32'], 'หารเท่ากัน 376.64 / 2 คน = 188.32 ต่อคน');
 
     // ---- สลับเป็น "หารตามรายการที่กิน" โดยยังไม่ระบุใครกินอะไรเลย (ควรเฉลี่ยเท่ากันเหมือนโหมดแรก) ----
     click($('.split-mode__btn[data-mode="itemized"]'));
-    splitCards = $$('#splitResult .split-card');
+    assert.equal($$('#summaryPanel .summary-person').length, 0, 'หารไม่เท่ากันไม่ต้องแสดงรายคนในการ์ดยอดรวม');
+    let splitCards = $$('#splitResult .split-card');
     amounts = splitCards.map((c) => c.querySelector('.split-card__amount').textContent);
     assert.deepEqual(amounts, ['฿188.32', '฿188.32']);
 
@@ -168,7 +167,7 @@ describe('การใช้งานจริงทั้งวงจร: เ�
     assert.equal($('#sumGrand').textContent, '200.00');
 
     click($('.tab[data-tab="split"]'));
-    const amounts = $$('#splitResult .split-card').map((c) => c.querySelector('.split-card__amount').textContent);
+    const amounts = $$('#summaryPanel .summary-person strong').map((el) => el.textContent);
     assert.deepEqual(amounts, ['฿100.00', '฿100.00']);
   });
 
@@ -286,7 +285,7 @@ describe('การใช้งานจริงทั้งวงจร: เ�
 
     const cards = $$('#itemsBody .item-card');
     assert.equal(cards.length, 1);
-    assert.equal(cards[0].querySelector('.item-name').value, 'ต้มยำกุ้ง');
+    assert.equal(cards[0].querySelector('.item-name').textContent, 'ต้มยำกุ้ง');
   });
 
   test('การใช้งานผ่านแท็บ "รายการ" ล้วน ๆ โดยไม่แตะแท็บเริ่มต้นเลย ก็ต้องหารบิลได้ปกติ', async () => {
@@ -300,7 +299,7 @@ describe('การใช้งานจริงทั้งวงจร: เ�
     click($('#addPersonBtn'));
     click($('.tab[data-tab="split"]'));
 
-    const amounts = $$('#splitResult .split-card').map((c) => c.querySelector('.split-card__amount').textContent);
+    const amounts = $$('#summaryPanel .summary-person strong').map((el) => el.textContent);
     assert.deepEqual(amounts, ['฿120.00']);
   });
 });
@@ -444,7 +443,7 @@ describe('"ใครกินอะไรบ้าง" — ปุ่มเลื
 });
 
 describe('เมนูหารบิล: สรุปรายการที่แต่ละคนกิน', () => {
-  test('การ์ดสรุปผลของแต่ละคนต้องแสดงรายการอาหารที่คนนั้นกินด้วย', async () => {
+  test('การ์ดสรุปผลของแต่ละคนต้องแสดงรายการอาหารที่คนนั้นกินด้วยเมื่อกดขยาย (โหมดหารตามรายการที่กิน)', async () => {
     setupDom();
     await bootApp();
 
@@ -457,16 +456,17 @@ describe('เมนูหารบิล: สรุปรายการที�
     click($('.tab[data-tab="people"]'));
     click($$('#assignList .assign-item')[0].querySelectorAll('.assign-tag:not(.assign-tag--all)')[0]);
 
+    // โหมดหารเท่ากันโชว์แค่การ์ดยอดรวม ไม่มีรายละเอียดรายการอาหารต่อคนให้ดู
     click($('.tab[data-tab="split"]'));
-    const splitCards = $$('#splitResult .split-card');
-    const firstPersonChips = Array.from(splitCards[0].querySelectorAll('.split-card__item-chip')).map((c) => c.textContent);
+    assert.equal($$('#splitResult .split-card').length, 0);
+
+    // สลับเป็นหารตามรายการที่กิน แล้วกดปุ่มขยายเพื่อดูรายการที่แต่ละคนกิน
+    click($('.split-mode__btn[data-mode="itemized"]'));
+    const firstCard = $$('#splitResult .split-card')[0];
+    click(firstCard.querySelector('.split-card__expand-btn'));
+    const firstPersonChips = Array.from(firstCard.querySelectorAll('.split-card__item-chip')).map((c) => c.textContent);
     assert.ok(firstPersonChips.some((t) => t.includes('ต้มยำกุ้ง')), 'คนแรกควรเห็นในสรุปว่ากินต้มยำกุ้ง');
     assert.ok(firstPersonChips.some((t) => t.includes('ข้าวผัดกุ้ง')), 'คนแรกควรเห็นข้าวผัดกุ้งด้วย (ไม่ระบุ = กินร่วมกันทุกคน)');
-
-    // สลับโหมดหารก็ต้องยังเห็นสรุปเดิม (ไม่เกี่ยวกับโหมดคำนวณเงิน)
-    click($('.split-mode__btn[data-mode="itemized"]'));
-    const firstPersonChipsItemized = Array.from($$('#splitResult .split-card')[0].querySelectorAll('.split-card__item-chip')).map((c) => c.textContent);
-    assert.ok(firstPersonChipsItemized.some((t) => t.includes('ต้มยำกุ้ง')));
   });
 });
 

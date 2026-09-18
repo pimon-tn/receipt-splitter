@@ -5,7 +5,8 @@
   "description": "เว็บแอปหารค่าใช้จ่ายตามใบเสร็จ (ไม่ต้องมีเซิร์ฟเวอร์ของตัวเอง) — package.json นี้มีไว้สำหรับรันเทสต์ระหว่างพัฒนาเท่านั้น ไม่จำเป็นสำหรับผู้ใช้ทั่วไปที่แค่เปิด index.html ใช้งาน",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "dev": "npx serve ."
   },
   "devDependencies": {
     "jsdom": "^30.0.1"

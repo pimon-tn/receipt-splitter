@@ -4,9 +4,8 @@
 /**
  * รวมยอดทั้งบิล: ยอดรวมรายการ, ค่าบริการ, ภาษี, ยอดสุทธิ
  *
- * รองรับ 2 ตัวเลือกที่ผู้ใช้กำหนดได้:
- * - settings.vatEnabled + settings.vatMode: 'exclusive' (ราคายังไม่รวม VAT → บวกเพิ่ม)
- *   หรือ 'inclusive' (ราคารวม VAT แล้ว → แยกยอดภาษีออกมาให้ดู ไม่บวกซ้ำ)
+ * ราคาที่กรอกไว้ถือว่ายังไม่รวม VAT เสมอ: บวกค่าบริการก่อน (ถ้าเปิด) แล้วค่อยคิด VAT
+ * จากยอดที่รวมค่าบริการแล้ว (ถ้าเปิด settings.vatEnabled)
  * - settings.serviceEnabled: มี/ไม่มีค่าบริการ ถ้ามีใช้ settings.servicePercent
  */
 export function calcBillTotals(items, settings) {
@@ -14,27 +13,12 @@ export function calcBillTotals(items, settings) {
 
   const vatRate = settings.vatEnabled ? (settings.vatPercent || 0) / 100 : 0;
   const serviceRate = settings.serviceEnabled ? (settings.servicePercent || 0) / 100 : 0;
-  const isInclusive = settings.vatEnabled && settings.vatMode === 'inclusive';
 
-  let foodBase, vatOnFood, serviceAmount, vatAmount, grandTotal;
+  const serviceAmount = subtotal * serviceRate;
+  const vatAmount = (subtotal + serviceAmount) * vatRate;
+  const grandTotal = subtotal + serviceAmount + vatAmount;
 
-  if (isInclusive) {
-    // ราคาที่กรอกไว้รวม VAT แล้ว: แยกฐานราคาก่อน VAT ออกมาก่อน
-    foodBase = subtotal / (1 + vatRate);
-    vatOnFood = subtotal - foodBase;
-    serviceAmount = foodBase * serviceRate;
-    const vatOnService = serviceAmount * vatRate;
-    vatAmount = vatOnFood + vatOnService;
-    grandTotal = foodBase + serviceAmount + vatAmount;
-  } else {
-    // ราคาที่กรอกไว้ยังไม่รวม VAT (หรือไม่มี VAT เลย): บวกค่าบริการและ VAT เพิ่มตามปกติ
-    foodBase = subtotal;
-    serviceAmount = foodBase * serviceRate;
-    vatAmount = (foodBase + serviceAmount) * vatRate;
-    grandTotal = foodBase + serviceAmount + vatAmount;
-  }
-
-  return { subtotal, foodBase, serviceAmount, vatAmount, grandTotal };
+  return { subtotal, serviceAmount, vatAmount, grandTotal };
 }
 
 /**
@@ -138,7 +122,9 @@ export function splitItemized(items, people, settings) {
 }
 
 export function formatMoney(n) {
-  return (Number.isFinite(n) ? n : 0).toLocaleString('th-TH', {
+  const value = Number.isFinite(n) ? n : 0;
+  const rounded = Math.round(value * 100) / 100;
+  return (rounded === 0 ? 0 : rounded).toLocaleString('th-TH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
