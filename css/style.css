@@ -1532,3 +1532,23 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   .app.has-nav .foot-credit{ margin: 0; }
   .app.has-nav .panel{ padding-bottom: 0; }
 }
+
+/* หน้าเลือกวิธีแบ่งค่าใช้จ่าย (มือถือ): ตัวเลือกเป็นแถวแนวนอนกะทัดรัด เพื่อให้ทั้งหน้าอยู่ในจอเดียว */
+@media (max-width: 599px){
+  .split-mode{ gap: 8px; }
+  .split-mode__btn{
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "icon name" "icon desc";
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+    justify-items: start;
+    text-align: left;
+    padding: 12px 44px 12px 14px;
+  }
+  .split-mode__icon{ grid-area: icon; margin: 0; font-size: 1.9rem; }
+  .split-mode__name{ grid-area: name; font-size: var(--fs-md); }
+  .split-mode__desc{ grid-area: desc; line-height: 1.4; }
+  .split-mode__check{ top: 50%; transform: translateY(-50%); }
+  #panel-method .state-note{ margin-top: 10px; padding: 10px 12px; }
+}
