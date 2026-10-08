@@ -6,6 +6,14 @@
 
 **AI agent: Claude (Sonnet 5.5)**
 
+### เปลี่ยนแปลง (Changed) — ปรับโครงสร้างโค้ด (ไม่เปลี่ยนพฤติกรรมที่ผู้ใช้เห็น)
+
+- **เพิ่ม `computeSplit(bill, mode)` ใน `js/splitter.js`** เป็นจุดเข้าเดียวของผลหารบิล คืน `{ mode, totals, perPerson (พร้อม items ที่แต่ละคนหาร), reconciled }` — แทนที่การเลือก `splitEqual`/`splitItemized` ซ้ำสองที่ใน `app.js` (`currentSplit`) และ `ui.js` (`computeSplit`) และการต่อ `getConsumptionSummary` + `calcBillTotals` + การเช็กยอดรวมตรงกันใน `renderSummaryPanel`
+- กฎ "ไม่ระบุผู้กิน = ทุกคนกินร่วมกัน" รวมเป็นฟังก์ชัน `consumersOf()` เดียวใน `splitter.js` (เดิมเขียนซ้ำ 2 จุด)
+- **เพิ่ม `js/bill.js` (`createBillSession(storage, newId)`)** เป็นเจ้าของสถานะบิลและกติกาการแก้ไข (เช่น ลบคนแล้วเอาออกจากผู้กินทุกรายการ, เริ่มบิลใหม่แล้วเก็บรายชื่อคนไว้) และบันทึกลง storage ให้เองทุกคำสั่ง `app.js` ไม่มี `persist()` / ไม่แก้ `bill` ตรง ๆ อีกต่อไป
+- `service-worker.js`: เพิ่ม `./js/bill.js` เข้า APP_SHELL และเลื่อนแคชเป็น v22
+- เพิ่ม `CONTEXT.md` (ศัพท์โดเมน) และเทสต์ `tests/bill.test.js`, เทสต์ `computeSplit` ใน `tests/splitter.test.js`
+
 ### แก้ไข (Fixed)
 
 - **เทสต์ integration รันได้อีกครั้ง**: ลด `jsdom` จาก ^30 เป็น ^26 เพราะ jsdom 30 ต้องการ Node ที่ใหม่กว่า 18 ทำให้ `tests/integration.test.js` ล้มตั้งแต่ตอน import (`ERR_REQUIRE_ESM`)

@@ -1,31 +1,27 @@
 // app.js — จุดเริ่มต้นของแอป
-// เก็บ state ของบิลไว้ในหน่วยความจำ + sync ลง localStorage ทุกครั้งที่เปลี่ยน
-// ผูก event ของ DOM แล้วเรียก ui.js ให้วาดผลลัพธ์ใหม่
+// ผูก event ของ DOM → สั่งแก้บิลผ่าน session (bill.js ดูแลกติกา + บันทึกให้เอง) → เรียก ui.js ให้วาดผลลัพธ์ใหม่
 
-import { loadBill, saveBill, createEmptyBill, cryptoId } from './storage.js';
+import { loadBill, saveBill, cryptoId } from './storage.js';
+import { createBillSession } from './bill.js';
 import { recognizeReceiptText, parseReceiptLines } from './ocr.js';
-import { splitEqual, splitItemized, formatMoney } from './splitter.js';
+import { computeSplit, formatMoney } from './splitter.js';
 import * as ui from './ui.js';
 
-let bill = loadBill();
+const session = createBillSession({ load: loadBill, save: saveBill }, cryptoId);
 let splitMode = 'equal';
 
 const $ = (sel) => document.querySelector(sel);
 
-/* ============ persist + re-render helpers ============ */
-
-function persist() {
-  saveBill(bill);
-}
+/* ============ re-render helpers ============ */
 
 function renderAll() {
-  ui.renderItems(bill, itemHandlers);
-  ui.renderChargeSettings(bill);
-  ui.renderTotals(bill);
-  ui.renderPeople(bill, peopleHandlers);
-  ui.renderAssignList(bill, assignHandlers);
+  ui.renderItems(session.bill, itemHandlers);
+  ui.renderChargeSettings(session.bill);
+  ui.renderTotals(session.bill);
+  ui.renderPeople(session.bill, peopleHandlers);
+  ui.renderAssignList(session.bill, assignHandlers);
   ui.renderSplitMode(splitMode);
-  ui.renderSplit(bill, splitMode, splitHandlers);
+  ui.renderSplit(session.bill, splitMode, splitHandlers);
   ui.renderStepNav(splitMode);
 }
 
@@ -33,35 +29,31 @@ function renderAll() {
 function goTo(tab) {
   ui.switchTab(tab);
   ui.renderStepNav(splitMode);
-  if (ui.getCurrentTab() === 'split') ui.renderSplit(bill, splitMode, splitHandlers);
+  if (ui.getCurrentTab() === 'split') ui.renderSplit(session.bill, splitMode, splitHandlers);
 }
 
 /* ============ Item handlers ============ */
 
 const itemHandlers = {
   onUpdateItem(id, patch) {
-    const item = bill.items.find((it) => it.id === id);
-    if (!item) return;
-    Object.assign(item, patch);
-    persist();
-    ui.renderTotals(bill);
+    if (!session.updateItem(id, patch)) return;
+    ui.renderTotals(session.bill);
     // อัปเดตแค่แถวนี้โดยไม่ re-render ทั้งตาราง เพื่อไม่ให้เสียตำแหน่ง scroll
     updateRowQty(id);
   },
   onRemoveItem(id) {
-    bill.items = bill.items.filter((it) => it.id !== id);
-    persist();
+    session.removeItem(id);
     renderAll();
   },
   onEditItem(id) {
-    const item = bill.items.find((it) => it.id === id);
+    const item = session.bill.items.find((it) => it.id === id);
     if (!item) return;
     ui.openItemModal(item);
   },
 };
 
 function updateRowQty(id) {
-  const item = bill.items.find((it) => it.id === id);
+  const item = session.bill.items.find((it) => it.id === id);
   if (!item) return;
   const card = document.querySelector(`#itemsBody .item-card[data-id="${id}"]`);
   if (!card) return;
@@ -134,18 +126,13 @@ function submitItemModal() {
 
   const editingId = ui.getEditingItemId();
   if (editingId) {
-    const item = bill.items.find((it) => it.id === editingId);
-    if (item) {
-      Object.assign(item, { name, qty, price });
-      ui.showToast(`แก้ไข "${name}" แล้ว`);
-    }
+    if (session.updateItem(editingId, { name, qty, price })) ui.showToast(`แก้ไข "${name}" แล้ว`);
   } else {
-    bill.items.push({ id: cryptoId(), name, qty, price, consumerIds: [] });
+    session.addItem({ name, qty, price });
     ui.showToast(`เพิ่ม "${name}" แล้ว`);
   }
 
   ui.closeItemModal();
-  persist();
   renderAll();
 }
 
@@ -165,53 +152,43 @@ $('#modalSubmitBtn').addEventListener('click', submitItemModal);
 /* ============ ค่าใช้จ่ายเพิ่มเติม (VAT / ค่าบริการ) ============ */
 
 $('#vatEnabledInput').addEventListener('change', (e) => {
-  bill.settings.vatEnabled = e.target.checked;
-  persist();
-  ui.renderChargeSettings(bill);
-  ui.renderTotals(bill);
+  session.setCharge('vatEnabled', e.target.checked);
+  ui.renderChargeSettings(session.bill);
+  ui.renderTotals(session.bill);
 });
 
 $('#vatPercentInput').addEventListener('input', (e) => {
-  bill.settings.vatPercent = parseFloat(e.target.value) || 0;
-  persist();
-  ui.renderTotals(bill);
+  session.setCharge('vatPercent', parseFloat(e.target.value) || 0);
+  ui.renderTotals(session.bill);
 });
 
 $('#serviceEnabledInput').addEventListener('change', (e) => {
-  bill.settings.serviceEnabled = e.target.checked;
-  persist();
-  ui.renderChargeSettings(bill);
-  ui.renderTotals(bill);
+  session.setCharge('serviceEnabled', e.target.checked);
+  ui.renderChargeSettings(session.bill);
+  ui.renderTotals(session.bill);
 });
 
 $('#servicePercentInput').addEventListener('input', (e) => {
-  bill.settings.servicePercent = parseFloat(e.target.value) || 0;
-  persist();
-  ui.renderTotals(bill);
+  session.setCharge('servicePercent', parseFloat(e.target.value) || 0);
+  ui.renderTotals(session.bill);
 });
 
 /* ============ People handlers ============ */
 
 const peopleHandlers = {
   onUpdatePerson(id, name) {
-    const person = bill.people.find((p) => p.id === id);
-    if (!person) return;
-    person.name = name;
-    persist();
+    session.renamePerson(id, name);
     // อัปเดตชื่อในหน้าระบุคนกินโดยไม่ต้อง re-render ทั้งหมด (กัน cursor กระโดด)
-    ui.renderAssignList(bill, assignHandlers);
+    ui.renderAssignList(session.bill, assignHandlers);
   },
   onRemovePerson(id) {
-    bill.people = bill.people.filter((p) => p.id !== id);
-    bill.items.forEach((it) => { it.consumerIds = (it.consumerIds || []).filter((cid) => cid !== id); });
-    persist();
+    session.removePerson(id);
     renderAll();
   },
 };
 
 function addPerson() {
-  bill.people.push({ id: cryptoId(), name: `คนที่ ${bill.people.length + 1}` });
-  persist();
+  session.addPerson();
   renderAll();
 }
 
@@ -219,11 +196,9 @@ $('#addPersonBtn').addEventListener('click', addPerson);
 $('#emptyAddPersonBtn').addEventListener('click', addPerson);
 
 $('#clearPeopleBtn').addEventListener('click', () => {
-  if (!bill.people.length) return;
+  if (!session.bill.people.length) return;
   if (!confirm('ล้างรายชื่อคนกินทั้งหมดใช่หรือไม่?')) return;
-  bill.people = [];
-  bill.items.forEach((item) => { item.consumerIds = []; });
-  persist();
+  session.clearPeople();
   renderAll();
   ui.showToast('ล้างรายชื่อทั้งหมดแล้ว');
 });
@@ -232,25 +207,12 @@ $('#clearPeopleBtn').addEventListener('click', () => {
 
 const assignHandlers = {
   onToggleConsumer(itemId, personId) {
-    const item = bill.items.find((it) => it.id === itemId);
-    if (!item) return;
-    item.consumerIds = item.consumerIds || [];
-    const idx = item.consumerIds.indexOf(personId);
-    if (idx >= 0) item.consumerIds.splice(idx, 1);
-    else item.consumerIds.push(personId);
-    persist();
-    ui.renderAssignList(bill, assignHandlers);
+    session.toggleConsumer(itemId, personId);
+    ui.renderAssignList(session.bill, assignHandlers);
   },
   onSelectAllConsumers(itemId) {
-    const item = bill.items.find((it) => it.id === itemId);
-    if (!item) return;
-    const consumerIds = item.consumerIds || [];
-    const allSelected = bill.people.length > 0 && bill.people.every((p) => consumerIds.includes(p.id));
-    // กดซ้ำตอนเลือกทุกคนอยู่แล้ว -> เคลียร์กลับเป็น [] (สถานะ implicit "ทุกคนกินร่วมกัน" ตามค่าเริ่มต้นของระบบ
-    // ไม่ใช่ "ไม่มีใครกินเลย" — ถ้าต้องการแบบนั้นต้องแตะถอดทีละคนต่อจากนี้)
-    item.consumerIds = allSelected ? [] : bill.people.map((p) => p.id);
-    persist();
-    ui.renderAssignList(bill, assignHandlers);
+    session.toggleAllConsumers(itemId);
+    ui.renderAssignList(session.bill, assignHandlers);
   },
 };
 
@@ -260,7 +222,7 @@ document.querySelectorAll('.split-mode__btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     splitMode = btn.dataset.mode;
     ui.renderSplitMode(splitMode);
-    ui.renderSplit(bill, splitMode, splitHandlers);
+    ui.renderSplit(session.bill, splitMode, splitHandlers);
     // โหมดกำหนดว่า flow มีหน้า "ใครกินอะไร" หรือไม่ — อัปเดตแท็บย่อย/ป้ายปุ่มถัดไปในที่
     // โดยไม่พาผู้ใช้ออกจากหน้านี้ (เขายังกำลังเลือกอยู่ อาจเปลี่ยนใจได้)
     ui.renderStepNav(splitMode);
@@ -271,7 +233,7 @@ document.querySelectorAll('.split-mode__btn').forEach((btn) => {
 
 const splitHandlers = {
   onSelectPerson(personId) {
-    ui.openPersonSheet(bill, splitMode, personId);
+    ui.openPersonSheet(session.bill, splitMode, personId);
   },
 };
 
@@ -283,7 +245,7 @@ $('#personSheetOverlay').addEventListener('click', (e) => {
 /* ============ Share sheet ============ */
 
 $('#openShareBtn').addEventListener('click', () => {
-  if (bill.people.length === 0 || bill.items.length === 0) {
+  if (session.bill.people.length === 0 || session.bill.items.length === 0) {
     ui.showToast('ต้องมีรายการอาหารและรายชื่อคนก่อน จึงจะแชร์ผลได้');
     return;
   }
@@ -336,15 +298,8 @@ $('#downloadImageBtn').addEventListener('click', () => {
   }
 });
 
-/** ยอดของแต่ละคนตามโหมดที่เลือกอยู่ (ใช้ทั้งข้อความแชร์และรูปภาพ) */
-function currentSplit() {
-  return splitMode === 'itemized'
-    ? splitItemized(bill.items, bill.people, bill.settings)
-    : splitEqual(bill.items, bill.people, bill.settings);
-}
-
 function createShareText() {
-  const { totals, perPerson } = currentSplit();
+  const { totals, perPerson } = computeSplit(session.bill, splitMode);
   const lines = [
     'สรุปหารบิล — Receipt Splitter',
     `ยอดรวมทั้งหมด ฿${formatMoney(totals.grandTotal)}`,
@@ -360,7 +315,7 @@ function createShareText() {
  * (วาดเองด้วย canvas API ไม่ต้องพึ่ง library ภายนอก — แอปนี้ทำงานแบบออฟไลน์ได้)
  */
 function downloadResultImage() {
-  const { totals, perPerson } = currentSplit();
+  const { totals, perPerson } = computeSplit(session.bill, splitMode);
 
   const scale = 2;
   const width = 640;
@@ -440,11 +395,8 @@ function downloadResultImage() {
 
 function startNewBill() {
   if (!confirm('ล้างข้อมูลบิลปัจจุบันทั้งหมด (ยกเว้นรายชื่อคน) และเริ่มใหม่?')) return;
-  const keptPeople = bill.people;
-  bill = createEmptyBill();
-  bill.people = keptPeople;
+  session.startNew();
   splitMode = 'equal';
-  persist();
   ui.closeAllOverlays();
   resetScanPanel();
   renderAll();
@@ -510,17 +462,7 @@ $('#parseBtn').addEventListener('click', () => {
     return;
   }
 
-  parsedItems.forEach((p) => {
-    bill.items.push({
-      id: cryptoId(),
-      name: p.name,
-      qty: p.qty,
-      price: p.price,
-      consumerIds: [],
-    });
-  });
-
-  persist();
+  session.addItems(parsedItems);
   renderAll();
   goTo('items');
 
@@ -549,5 +491,5 @@ if ('serviceWorker' in navigator) {
 
 renderAll();
 // มีบิลค้างอยู่จากครั้งก่อน (เก็บใน localStorage) → เสนอให้ทำต่อได้เลย ไม่ต้องเริ่มใหม่
-$('#resumeBtn').hidden = bill.items.length === 0;
+$('#resumeBtn').hidden = session.bill.items.length === 0;
 ui.switchTab('landing');

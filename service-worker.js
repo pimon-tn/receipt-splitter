@@ -2,7 +2,7 @@
 // แคชไฟล์หลักของแอปไว้ ทำให้เปิดใช้งานได้แม้ไม่มีอินเทอร์เน็ต (ยกเว้นตอนสแกน OCR ครั้งแรก
 // ที่ต้องโหลดชุดภาษาจาก CDN) และทำให้เบราว์เซอร์เสนอ "เพิ่มลงหน้าจอโฮม" ได้
 
-const CACHE_NAME = 'receipt-splitter-v21';
+const CACHE_NAME = 'receipt-splitter-v22';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './js/app.js',
   './js/ui.js',
   './js/storage.js',
+  './js/bill.js',
   './js/ocr.js',
   './js/splitter.js',
   './icons/icon-192.png',

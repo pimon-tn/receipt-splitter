@@ -10,7 +10,7 @@
 
 1. **ไม่มี build step** — ใช้ vanilla JavaScript (ES Modules) ล้วน ๆ ไม่มี bundler/framework ไม่ต้อง `npm install` ก่อนใช้งาน เปิดไฟล์แล้วรันได้ทันที
 2. **แยกหน้าที่ชัดเจนต่อไฟล์ (single responsibility)** — ดูหัวข้อ "โครงสร้างไฟล์" ด้านล่าง
-3. **State เดียว ความจริงเดียว (single source of truth)** — ตัวแปร `bill` ใน `js/app.js` คือสถานะทั้งหมดของบิลปัจจุบัน ทุกการเปลี่ยนแปลงต้องผ่าน handler ใน `app.js` แล้วเรียก `persist()` + เรียก `ui.render*()` ที่เกี่ยวข้องเสมอ
+3. **State เดียว ความจริงเดียว (single source of truth)** — `session` (จาก `createBillSession()` ใน `js/bill.js`) คือเจ้าของสถานะบิลปัจจุบัน ทุกการเปลี่ยนแปลงต้องผ่านคำสั่งของ `session` (เช่น `session.addItem()`, `session.removePerson()`) ซึ่งบังคับกติกาและบันทึกลง storage ให้เองทุกครั้ง แล้ว handler ใน `app.js` ค่อยเรียก `ui.render*()` ที่เกี่ยวข้อง — ห้ามแก้ `session.bill` ตรง ๆ
 4. **ui.js ไม่มี business logic** — มีหน้าที่ "อ่าน state แล้ววาด DOM" เท่านั้น การคำนวณทั้งหมดอยู่ใน `splitter.js`
 5. **ไม่มีข้อมูลผู้ใช้ออกจากเครื่อง** — ข้อมูลบิลเก็บใน `localStorage` ของเบราว์เซอร์เท่านั้น การอ่านใบเสร็จ (OCR) ก็ประมวลผลในเบราว์เซอร์ผ่าน Tesseract.js (โหลดโมดูล/โมเดลภาษาจาก CDN สาธารณะ แต่ตัวรูปภาพใบเสร็จไม่ถูกส่งขึ้นเซิร์ฟเวอร์ใด ๆ)
 
@@ -24,9 +24,10 @@ receipt-splitter/
 ├── css/
 │   └── style.css        ธีม "Calm Utility 2026" — Warm Gray + Muted Teal (ตัวแปรสีอยู่ใน :root ด้านบนไฟล์)
 ├── js/
-│   ├── storage.js        อ่าน/เขียน localStorage, โครงสร้างข้อมูลเริ่มต้นของบิล
+│   ├── storage.js        อ่าน/เขียน localStorage, โครงสร้างข้อมูลเริ่มต้นของบิล (adapter ของ bill.js)
+│   ├── bill.js            Bill session: เจ้าของสถานะบิล + กติกาการแก้ไขทั้งหมด + บันทึกให้เอง (รับ storage เป็น adapter)
 │   ├── ocr.js             เรียก Tesseract.js อ่านรูปภาพ + heuristic แปลงข้อความเป็นรายการ
-│   ├── splitter.js        ฟังก์ชันคำนวณล้วน ๆ (หารเท่ากัน / หารตามรายการ) ไม่แตะ DOM
+│   ├── splitter.js        ฟังก์ชันคำนวณล้วน ๆ ไม่แตะ DOM — จุดเข้าสำหรับหน้าจอคือ `computeSplit(bill, mode)`
 │   ├── ui.js              ฟังก์ชัน render ทุกอย่างขึ้นจอ ไม่มีการคำนวณหรือแก้ state
 │   └── app.js             จุดเริ่มต้น: เก็บ state, ผูก event, เรียก storage/ocr/splitter/ui
 ├── tests/                 ชุดเทสต์ (unit + integration) — ดูหัวข้อ "การทดสอบ" ด้านล่าง
@@ -129,7 +130,7 @@ bill = {
   `createImageBitmap`) จะ fallback ไปอ่านไฟล์ต้นฉบับตรง ๆ โดยไม่บล็อกฟีเจอร์ — ตรรกะคำนวณ threshold
   (`computeOtsuThreshold`) แยกเป็น pure function ต่างหาก มีเทสต์ตรง ๆ ใน `tests/ocr.test.js` ส่วน
   preprocessing ที่พึ่ง `<canvas>`/`Image` จริงต้องทดสอบด้วยตา (ดู README/SKILL.md หัวข้อทดสอบ)
-- **ห้ามใส่ business logic ใน ui.js** — ถ้าต้องคำนวณอะไรใหม่ ให้เขียนฟังก์ชัน pure function เพิ่มใน `splitter.js` แล้วเรียกใช้จาก `ui.js`/`app.js`
+- **ห้ามใส่ business logic ใน ui.js** — ถ้าต้องคำนวณอะไรใหม่ ให้เขียนฟังก์ชัน pure function เพิ่มใน `splitter.js` แล้วเรียกใช้จาก `ui.js`/`app.js` และอย่าเลือก `splitEqual`/`splitItemized` เองตามโหมดที่ไหน ให้เรียก `computeSplit(bill, mode)` ที่เดียว (ได้ totals, ยอดต่อคน, รายการที่แต่ละคนหาร, และ `reconciled` มาพร้อมกัน)
 - **รายการอาหารแสดงเป็นการ์ด ไม่ใช่ตาราง** (`.item-card` ใน `ui.js`) เพื่อให้กดง่ายบนมือถือ มีปุ่ม +/- ปรับจำนวนแบบแตะ — การแก้ input ในการ์ด (`updateRowSum` ใน `app.js`) ตั้งใจไม่ re-render การ์ดทั้งหมดตอนพิมพ์ เพื่อไม่ให้ cursor กระโดด ถ้าจะแก้ ระวังจุดนี้
 - **ทดสอบการคำนวณได้ด้วย Node โดยตรง** เพราะ `splitter.js` และ `ocr.js` เป็น pure ES module ไม่พึ่ง DOM เช่น:
   ```bash

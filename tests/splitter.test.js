@@ -4,7 +4,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { calcBillTotals, splitEqual, splitItemized, getConsumptionSummary, formatMoney } from '../js/splitter.js';
+import { calcBillTotals, splitEqual, splitItemized, getConsumptionSummary, computeSplit, formatMoney } from '../js/splitter.js';
 
 // ค่าเริ่มต้นของ settings แบบไม่มี VAT ไม่มีค่าบริการ (baseline)
 const noCharges = { vatEnabled: false, vatPercent: 7, serviceEnabled: false, servicePercent: 10 };
@@ -163,5 +163,43 @@ describe('formatMoney', () => {
   test('ค่าที่ไม่ใช่ตัวเลข (NaN/undefined) ต้องไม่ทำให้พัง ให้ถือเป็น 0', () => {
     assert.equal(formatMoney(NaN), '0.00');
     assert.equal(formatMoney(undefined), '0.00');
+  });
+});
+
+describe('computeSplit — จุดเข้าเดียวของผลหารบิล', () => {
+  const bill = (settings = noCharges) => ({ items: sampleItems(), people: samplePeople(), settings });
+
+  test('โหมด itemized: ยอดต่อคนเท่ากับ splitItemized และมีรายการที่แต่ละคนหารติดมาด้วย', () => {
+    const result = computeSplit(bill(), 'itemized');
+    const direct = splitItemized(sampleItems(), samplePeople(), noCharges);
+    assert.deepEqual(result.perPerson.map((p) => p.amount), direct.perPerson.map((p) => p.amount));
+    assert.deepEqual(result.perPerson.map((p) => p.subtotal), direct.perPerson.map((p) => p.subtotal));
+    assert.equal(result.perPerson[0].items.length, 2);
+    assert.equal(result.perPerson[2].items.length, 0);
+    assert.equal(result.mode, 'itemized');
+  });
+
+  test('โหมด equal: ทุกคนจ่ายเท่ากัน ไม่มี subtotal แต่ยังมีรายการอ้างอิง', () => {
+    const result = computeSplit(bill(), 'equal');
+    assert.deepEqual(result.perPerson.map((p) => p.amount), [100, 100, 100]);
+    assert.equal(result.perPerson[0].subtotal, undefined);
+    assert.equal(result.perPerson[0].items.length, 2);
+  });
+
+  test('mode ที่ไม่รู้จักถือเป็นหารเท่ากัน', () => {
+    assert.deepEqual(computeSplit(bill(), 'whatever').perPerson.map((p) => p.amount), [100, 100, 100]);
+  });
+
+  test('reconciled เป็นจริงเมื่อยอดทุกคนรวมกันตรงยอดสุทธิ แม้มีเศษสตางค์', () => {
+    const settings = { vatEnabled: true, vatPercent: 7, serviceEnabled: true, servicePercent: 10 };
+    assert.equal(computeSplit(bill(settings), 'equal').reconciled, true);
+    assert.equal(computeSplit(bill(settings), 'itemized').reconciled, true);
+  });
+
+  test('ไม่มีคน → reconciled เป็นเท็จ และ perPerson ว่าง (ไม่ throw)', () => {
+    const result = computeSplit({ items: sampleItems(), people: [], settings: noCharges }, 'itemized');
+    assert.deepEqual(result.perPerson, []);
+    assert.equal(result.reconciled, false);
+    assert.equal(result.totals.grandTotal, 300);
   });
 });

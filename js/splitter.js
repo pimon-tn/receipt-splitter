@@ -59,6 +59,14 @@ function distributeRounded(amounts, targetTotal) {
 }
 
 /**
+ * กฎเดียวของระบบ: รายการที่ไม่ได้ระบุคนกิน (consumerIds ว่าง) ถือว่าทุกคนกินร่วมกัน
+ * ใช้ร่วมกันทั้งการคำนวณยอดและการสรุปรายการต่อคน เพื่อไม่ให้สองที่เข้าใจไม่ตรงกัน
+ */
+function consumersOf(item, allIds) {
+  return item.consumerIds && item.consumerIds.length > 0 ? item.consumerIds : allIds;
+}
+
+/**
  * หารเท่ากันทุกคน: เอายอดสุทธิทั้งบิลหารด้วยจำนวนคน
  * ปัดเศษสตางค์ให้ผลรวมของยอดที่แสดงต่อคนตรงกับยอดสุทธิที่แสดงเป๊ะ
  */
@@ -91,9 +99,7 @@ export function splitItemized(items, people, settings) {
 
   for (const item of items) {
     const lineTotal = item.qty * item.price;
-    const consumers = item.consumerIds && item.consumerIds.length > 0
-      ? item.consumerIds
-      : people.map((p) => p.id); // ไม่ระบุ = หารทุกคน
+    const consumers = consumersOf(item, people.map((p) => p.id));
 
     const share = lineTotal / (consumers.length || count);
     for (const personId of consumers) {
@@ -121,6 +127,29 @@ export function splitItemized(items, people, settings) {
   return { totals, perPerson };
 }
 
+/**
+ * ผลหารบิลครบชุดตามโหมดที่เลือก — จุดเข้าเดียวสำหรับทุกหน้าจอ (สรุป, sheet รายคน, ข้อความแชร์, รูปภาพ)
+ *
+ * คืนค่า { mode, totals, perPerson, reconciled }
+ * - perPerson[] = { personId, name, amount, items, subtotal? }
+ *   items = รายการที่คนนั้นหาร (ดู getConsumptionSummary) ในโหมดหารเท่ากันใช้แสดงอ้างอิงเท่านั้น ไม่กระทบยอด
+ *   subtotal มีเฉพาะโหมด itemized
+ * - reconciled = มีคนอย่างน้อยหนึ่งคน และยอดทุกคนรวมกันตรงกับยอดสุทธิ (เทียบเป็นสตางค์)
+ */
+export function computeSplit(bill, mode) {
+  const { items, people, settings } = bill;
+  const base = mode === 'itemized'
+    ? splitItemized(items, people, settings)
+    : splitEqual(items, people, settings);
+  const consumption = getConsumptionSummary(items, people);
+
+  const perPerson = base.perPerson.map((p) => ({ ...p, items: consumption.get(p.personId) || [] }));
+  const sumCents = perPerson.reduce((sum, p) => sum + Math.round(p.amount * 100), 0);
+  const reconciled = perPerson.length > 0 && sumCents === Math.round(base.totals.grandTotal * 100);
+
+  return { mode, totals: base.totals, perPerson, reconciled };
+}
+
 export function formatMoney(n) {
   const value = Number.isFinite(n) ? n : 0;
   const rounded = Math.round(value * 100) / 100;
@@ -143,7 +172,7 @@ export function getConsumptionSummary(items, people) {
   const allIds = people.map((p) => p.id);
 
   for (const item of items) {
-    const consumers = item.consumerIds && item.consumerIds.length > 0 ? item.consumerIds : allIds;
+    const consumers = consumersOf(item, allIds);
     // นับเฉพาะคนที่ยังอยู่ในรายชื่อจริง เผื่อ consumerIds ค้างชื่อคนที่ถูกลบไปแล้ว
     const validConsumers = consumers.filter((id) => map.has(id));
     const sharedWith = validConsumers.length || allIds.length || 1;

@@ -4,9 +4,7 @@
 
 import {
   calcBillTotals,
-  splitEqual,
-  splitItemized,
-  getConsumptionSummary,
+  computeSplit,
   countUnassignedItems,
   formatMoney,
 } from './splitter.js';
@@ -340,6 +338,8 @@ export function renderSplit(bill, mode, handlers = {}) {
   const hint = $('#splitHint');
   wrap.innerHTML = '';
 
+  const result = computeSplit(bill, mode);
+
   if (bill.people.length === 0 || bill.items.length === 0) {
     const missingPeople = bill.people.length === 0;
     if (resultMain) resultMain.hidden = false;
@@ -350,24 +350,20 @@ export function renderSplit(bill, mode, handlers = {}) {
         <p class="empty-state__title">${missingPeople ? 'ยังไม่มีรายชื่อคนกิน' : 'ยังไม่มีรายการอาหาร'}</p>
         <p class="empty-state__desc">${missingPeople ? 'เพิ่มรายชื่อคนกินก่อน จึงจะหารบิลได้' : 'เพิ่มรายการอาหารก่อน จึงจะหารบิลได้'}</p>
       </div>`;
-    renderSummaryPanel(bill, [], mode);
+    renderSummaryPanel(result);
     return;
   }
-
-  const result = computeSplit(bill, mode);
 
   // หารเท่ากัน: ทุกคนจ่ายเท่ากันอยู่แล้ว โชว์แค่การ์ดยอดรวมด้านบนพอ ไม่ต้องมีรายละเอียดต่อคนให้กดดู
   if (mode === 'equal') {
     if (resultMain) resultMain.hidden = true;
     if (hint) hint.textContent = 'หารเท่ากันทุกคน ดูยอดที่ต้องจ่ายได้จากการ์ดด้านบน';
-    renderSummaryPanel(bill, result.perPerson, mode);
+    renderSummaryPanel(result);
     return;
   }
 
   if (resultMain) resultMain.hidden = false;
   if (hint) hint.textContent = 'แตะชื่อเพื่อดูยอดของแต่ละรายการ หรือแตะลูกศรเพื่อดูรายการอาหารที่หาร';
-
-  const consumption = getConsumptionSummary(bill.items, bill.people);
 
   result.perPerson.forEach((p, index) => {
     const name = p.name || 'ไม่มีชื่อ';
@@ -375,7 +371,7 @@ export function renderSplit(bill, mode, handlers = {}) {
     card.className = 'split-card';
     card.dataset.personId = p.personId;
 
-    const items = consumption.get(p.personId) || [];
+    const items = p.items;
     const shown = items.slice(0, MAX_CHIPS);
     const rest = items.length - shown.length;
     const chips = items.length
@@ -417,25 +413,12 @@ export function renderSplit(bill, mode, handlers = {}) {
     wrap.appendChild(card);
   });
 
-  renderSummaryPanel(bill, result.perPerson, mode);
+  renderSummaryPanel(result);
 }
 
-/** เรียกตัวคำนวณตามโหมดที่เลือก (ใช้ร่วมกันระหว่างการ์ดสรุปและ sheet รายละเอียด) */
-function computeSplit(bill, mode) {
-  return mode === 'itemized'
-    ? splitItemized(bill.items, bill.people, bill.settings)
-    : splitEqual(bill.items, bill.people, bill.settings);
-}
-
-function renderSummaryPanel(bill, perPerson, mode) {
+function renderSummaryPanel({ mode, totals, perPerson, reconciled }) {
   const panel = $('#summaryPanel');
   if (!panel) return;
-
-  const totals = calcBillTotals(bill.items, bill.settings);
-  const sumOfPeople = perPerson.reduce((sum, p) => sum + p.amount, 0);
-  // ตรวจจริงว่ายอดที่แสดงต่อคนรวมกันแล้วตรงกับยอดบิลที่แสดง (ไม่ใช่ข้อความตายตัว)
-  const matches = perPerson.length > 0
-    && Math.round(sumOfPeople * 100) === Math.round(totals.grandTotal * 100);
 
   // หารไม่เท่ากัน: การ์ดนี้โชว์แค่ยอดรวม รายชื่อรายคนไปอยู่ในการ์ดด้านล่างแทน (กดขยายดูได้)
   const showPeopleList = mode !== 'itemized';
@@ -454,7 +437,7 @@ function renderSummaryPanel(bill, perPerson, mode) {
           </div>`).join('')
         : '<p class="summary-empty">เพิ่มรายการและรายชื่อเพื่อดูยอดสรุป</p>'}
     </div>` : ''}
-    ${matches
+    ${reconciled
       ? '<div class="summary-note"><i class="uicon fi-br-check-circle" aria-hidden="true"></i><span>ยอดของทุกคนรวมกันตรงกับยอดบิลแล้ว</span></div>'
       : ''}
   `;
@@ -472,7 +455,7 @@ export function openPersonSheet(bill, mode, personId) {
   const row = result.perPerson.find((p) => p.personId === personId);
   if (!row) return;
 
-  const items = getConsumptionSummary(bill.items, bill.people).get(personId) || [];
+  const items = row.items;
 
   const itemsHtml = items.length
     ? items.map((it) => `
