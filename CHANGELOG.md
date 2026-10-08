@@ -2,6 +2,15 @@
 
 รูปแบบ: [Keep a Changelog](https://keepachangelog.com/) แบบย่อ — ทุกครั้งที่แก้ไขโปรเจกต์ ให้เพิ่มหัวข้อใหม่ด้านบนสุดพร้อมวันที่ และระบุ `AI agent:` (หรือ `ผู้แก้ไข:` สำหรับการแก้ไขโดยมนุษย์) ในหัวข้อนั้นเสมอ
 
+## [Unreleased] - 2026-10-08
+
+**AI agent: Claude (Sonnet 5.5)**
+
+### แก้ไข (Fixed)
+
+- **เทสต์ integration รันได้อีกครั้ง**: ลด `jsdom` จาก ^30 เป็น ^26 เพราะ jsdom 30 ต้องการ Node ที่ใหม่กว่า 18 ทำให้ `tests/integration.test.js` ล้มตั้งแต่ตอน import (`ERR_REQUIRE_ESM`)
+- `tests/integration.test.js`: ให้เทสต์ทุกเคสรันทีละเคส (คิว) เพราะทุกเคสใช้ `global.document` ร่วมกัน เมื่อรันซ้อนกัน แอปของเคสหนึ่งไปผูก event เข้า DOM ของอีกเคส ทำให้นับรายการเกินและคลิกซ้ำ
+
 ## [Unreleased] - 2026-09-18 (3)
 
 **AI agent: Claude (Sonnet 5)**

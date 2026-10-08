@@ -3,12 +3,17 @@
 // (สร้างจาก index.html ตัวจริงผ่าน jsdom) แล้วจำลองการกด/พิมพ์ของผู้ใช้จริง ๆ
 // ไม่ได้ reimplement logic ขึ้นมาใหม่ — นี่คือการรันแอปตัวจริงเพื่อพิสูจน์ว่าใช้งานได้จริง
 
-import { test, describe } from 'node:test';
+import { test as nodeTest, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// เทสต์ทุกเคสใช้ global.document ร่วมกัน (setupDom สลับทับ) จึงต้องรันทีละเคสเท่านั้น
+// ถ้ารันซ้อนกัน app ของเคสหนึ่งจะไปผูก event เข้า DOM ของอีกเคส ทำให้นับรายการเกิน/คลิกซ้ำ
+let queue = Promise.resolve();
+const test = (name, fn) => nodeTest(name, () => (queue = queue.then(fn, fn)));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..');
