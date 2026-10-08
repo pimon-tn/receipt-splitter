@@ -145,7 +145,7 @@ export function computeSplit(bill, mode) {
 
   const perPerson = base.perPerson.map((p) => ({ ...p, items: consumption.get(p.personId) || [] }));
   const sumCents = perPerson.reduce((sum, p) => sum + Math.round(p.amount * 100), 0);
-  const reconciled = perPerson.length > 0 && sumCents === Math.round(base.totals.grandTotal * 100);
+  const reconciled = perPerson.length > 0 && items.length > 0 && sumCents === Math.round(base.totals.grandTotal * 100);
 
   return { mode, totals: base.totals, perPerson, reconciled };
 }

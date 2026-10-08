@@ -202,4 +202,9 @@ describe('computeSplit — จุดเข้าเดียวของผล�
     assert.equal(result.reconciled, false);
     assert.equal(result.totals.grandTotal, 300);
   });
+
+  test('มีคนแต่ไม่มีรายการ → reconciled เป็นเท็จ (ไม่โชว์ว่ายอดตรงบิลที่ว่างเปล่า)', () => {
+    const result = computeSplit({ items: [], people: samplePeople(), settings: noCharges }, 'equal');
+    assert.equal(result.reconciled, false);
+  });
 });

@@ -350,7 +350,7 @@ export function renderSplit(bill, mode, handlers = {}) {
         <p class="empty-state__title">${missingPeople ? 'ยังไม่มีรายชื่อคนกิน' : 'ยังไม่มีรายการอาหาร'}</p>
         <p class="empty-state__desc">${missingPeople ? 'เพิ่มรายชื่อคนกินก่อน จึงจะหารบิลได้' : 'เพิ่มรายการอาหารก่อน จึงจะหารบิลได้'}</p>
       </div>`;
-    renderSummaryPanel(result);
+    renderSummaryPanel({ ...result, perPerson: [] });
     return;
   }
 
