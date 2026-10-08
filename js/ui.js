@@ -83,6 +83,8 @@ export function switchTab(tabName) {
   // แถบ step โชว์เฉพาะหน้าที่อยู่ในขั้นตอนการหารบิล (1-4)
   const step = stepOf(target);
   $('#tabs').hidden = step === 0;
+  // บนจอใหญ่ แถบขั้นตอนจะย้ายไปเป็น sidebar ซ้าย — ใช้คลาสนี้เปิดเลย์เอาต์สองคอลัมน์เฉพาะหน้าที่มีแถบขั้นตอน
+  $('#app').classList.toggle('has-nav', step !== 0);
   $all('.tab').forEach((btn) => {
     const btnStep = stepOf(btn.dataset.tab);
     btn.setAttribute('aria-selected', btnStep === step ? 'true' : 'false');
@@ -166,13 +168,17 @@ export function renderItems(bill, handlers) {
         <span class="item-name">${escapeHtml(item.name)}</span>
         <span class="item-price">฿${formatMoney(item.qty * item.price)}</span>
       </button>
-      <div class="qty-stepper">
-        <button type="button" class="qty-btn qty-btn--minus" aria-label="ลดจำนวน"><i class="uicon fi-br-minus" aria-hidden="true"></i></button>
-        <span class="item-qty" aria-label="จำนวน">${item.qty}</span>
-        <button type="button" class="qty-btn qty-btn--plus" aria-label="เพิ่มจำนวน"><i class="uicon fi-br-add" aria-hidden="true"></i></button>
+      <div class="item-row-bottom">
+        <div class="qty-stepper">
+          <button type="button" class="qty-btn qty-btn--minus" aria-label="ลดจำนวน"><i class="uicon fi-br-minus" aria-hidden="true"></i></button>
+          <span class="item-qty" aria-label="จำนวน">${item.qty}</span>
+          <button type="button" class="qty-btn qty-btn--plus" aria-label="เพิ่มจำนวน"><i class="uicon fi-br-add" aria-hidden="true"></i></button>
+        </div>
+        <div class="item-actions">
+          <button type="button" class="row-edit" aria-label="แก้ไขรายการ ${escapeHtml(item.name)}"><i class="uicon fi-br-edit" aria-hidden="true"></i></button>
+          <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}"><i class="uicon fi-br-trash-xmark" aria-hidden="true"></i></button>
+        </div>
       </div>
-      <button type="button" class="row-edit" aria-label="แก้ไขรายการ ${escapeHtml(item.name)}"><i class="uicon fi-br-edit" aria-hidden="true"></i></button>
-      <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}"><i class="uicon fi-br-trash-xmark" aria-hidden="true"></i></button>
     `;
 
     $('.item-main', card).addEventListener('click', () => handlers.onEditItem(item.id));

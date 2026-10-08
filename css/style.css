@@ -499,19 +499,29 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 .items-list{ display: flex; flex-direction: column; gap: 10px; }
 .item-card{
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 12px;
   box-shadow: var(--shadow-soft);
 }
-.item-main{
-  flex: 1;
-  min-width: 0;
+/* แถวล่าง: ตัวเพิ่ม/ลดจำนวนอยู่ซ้าย ปุ่มแก้ไข/ลบอยู่ขวา — แยกจากแถวชื่อ+ราคา
+   เพื่อให้ชื่ออาหารได้พื้นที่เต็มความกว้างการ์ดเสมอ ไม่ถูกปุ่มต่าง ๆ เบียดจนหาย */
+.item-row-bottom{
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.item-actions{ display: flex; align-items: center; gap: 4px; }
+.item-main{
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 6px;
   border: 0;
@@ -529,8 +539,11 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   font-weight: 700;
   color: var(--ink);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 .item-price{
   flex-shrink: 0;
@@ -544,18 +557,18 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 8px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 6px 14px;
+  padding: 4px 10px;
   flex-shrink: 0;
 }
 .qty-btn{
   border: 0;
   background: transparent;
   color: var(--ink-soft);
-  font-size: var(--icon-sm);
+  font-size: var(--icon-xs);
   font-weight: 700;
   display: grid;
   place-items: center;
@@ -566,7 +579,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 .qty-btn:hover{ color: var(--brand-strong); }
 .qty-btn:active{ transform: scale(.85); }
 .item-qty{
-  min-width: 30px;
+  min-width: 22px;
   text-align: center;
   font-family: var(--font-money);
   font-weight: 700;
@@ -1278,6 +1291,91 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   }
   .hero{ min-height: calc(100vh - 48px); }
   .steps{ bottom: 24px; border-radius: 0 0 22px 22px; }
+}
+
+/* ---------- แท็บเล็ต (iPad แนวตั้ง ≥768px) ----------
+   ขยายการ์ดให้กว้างขึ้น แล้วจัดรายการ/รายชื่อเป็น 2 คอลัมน์ให้ใช้พื้นที่คุ้ม
+   แถบขั้นตอนยังอยู่ด้านล่างเหมือนมือถือ (ใช้งานด้วยนิ้วโป้งได้สะดวก) */
+@media (min-width: 768px){
+  .app{ max-width: 720px; }
+  .steps{ width: min(720px, 100%); }
+  .sheet{ max-width: 720px; }
+  .modal{ max-width: 420px; }
+
+  .hero{ padding-inline: max(var(--pad-x), calc((100% - 560px) / 2)); }
+
+  .start-choice{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .start-card{ grid-template-columns: 1fr; align-content: start; gap: 12px; }
+  .start-card__chev{ display: none; }
+
+  .items-list,
+  .people-list{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+  }
+}
+
+/* ---------- เดสก์ท็อป (≥1024px) ----------
+   ย้ายแถบขั้นตอนจากด้านล่างมาเป็น sidebar ซ้าย (ใช้ DOM/ปุ่มชุดเดิม แค่จัดตำแหน่งใหม่)
+   คลาส .has-nav ถูกเปิดโดย switchTab() เฉพาะหน้าที่มีแถบขั้นตอน
+   หน้า landing / เลือกวิธีเพิ่มรายการ ยังเป็นคอลัมน์เดียวเต็มกว้างเหมือนเดิม */
+@media (min-width: 1024px){
+  .app{ max-width: 1040px; }
+  .sheet{ max-width: 560px; }
+
+  .app.has-nav{
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      "sidebar main"
+      "sidebar foot";
+  }
+  .app.has-nav .topbar{
+    grid-area: sidebar;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-soft);
+    border-right: 1px solid var(--line);
+  }
+  .app.has-nav .appbar{
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: 0;
+    padding: 22px 18px 8px;
+  }
+  .app.has-nav .steps{
+    position: static;
+    width: auto;
+    transform: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 12px 14px;
+    background: transparent;
+    backdrop-filter: none;
+    border-top: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .app.has-nav .tab{
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+  }
+  .app.has-nav .tab:hover{ background: var(--surface-tint); }
+  .app.has-nav .tab[aria-selected="true"]{ background: var(--surface-tint); }
+  .app.has-nav .tab__icon{ font-size: var(--icon-lg); }
+  .app.has-nav .screen{ grid-area: main; padding-bottom: 22px; }
+  .app.has-nav .app-foot{ grid-area: foot; }
 }
 
 @media (prefers-reduced-motion: reduce){
