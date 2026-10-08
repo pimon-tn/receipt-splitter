@@ -1266,6 +1266,16 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 /* ---------- Accessibility ---------- */
 :focus-visible{ outline: 2px solid var(--brand-strong); outline-offset: 2px; }
 
+/* จอแคบมาก (เช่นจอนอกของมือถือพับ ~280px): ให้แถวปุ่มของรายการตัดลงบรรทัดใหม่ได้
+   ชื่ออาหารจะได้ไม่ถูกบีบหายไปไม่ว่าจอจะแคบเท่าไร */
+@media (max-width: 340px){
+  .item-row-bottom{ flex-wrap: wrap; }
+  .qty-stepper{ gap: 6px; padding: 4px 8px; }
+  .tab{ padding: 8px 2px; }
+  .tab__label{ font-size: var(--fs-xs); }
+  .btn--tiny{ padding: 6px 10px; }
+}
+
 /* จอเล็กมาก: ลดขนาดตัวอักษรหัวข้อ ไม่ให้ล้น */
 @media (max-width: 360px){
   :root{ --pad-x: 14px; }
