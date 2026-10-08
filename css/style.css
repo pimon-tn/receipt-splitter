@@ -927,7 +927,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   transform: rotate(45deg);
 }
 
-@media (max-width: 480px){
+@media (max-width: 599px){
   .split-mode{ grid-template-columns: 1fr; }
 }
 
