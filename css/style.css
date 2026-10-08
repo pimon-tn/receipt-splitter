@@ -67,12 +67,25 @@
   --shadow-sheet: 0 -12px 40px rgba(24, 61, 74, .18);
 
   /* ความสูงของแถบบนที่ sticky (appbar + steps) ใช้กัน content ถูกทับ */
-  --pad-x: 18px;
+  --pad-x: clamp(14px, 4.4vw, 24px);
+
+  /* ขนาดพื้นที่แตะขั้นต่ำ: เมาส์ 36px / จอสัมผัส 44px (ดู @media (pointer:coarse)) */
+  --tap: 36px;
+  /* ความสูงที่กันไว้ให้แถบขั้นตอนด้านล่าง (ใช้ใน .screen padding) */
+  --steps-h: 90px;
+  /* ความสูงที่ใช้ได้จริงของหน้าจอ: dvh ปรับตามแถบ browser/คีย์บอร์ดมือถือ (vh เป็น fallback) */
+  --vh-full: 100vh;
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+@supports (height: 100dvh){
+  :root{ --vh-full: 100dvh; }
 }
 
 *{ box-sizing: border-box; }
 
-html{ -webkit-text-size-adjust: 100%; font-size: 16px; }
+/* ใช้ % เพื่อเคารพขนาดฟอนต์ที่ผู้ใช้ตั้งไว้ในเบราว์เซอร์ แล้วค่อยขยายตามความกว้างจอ */
+html{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; font-size: 100%; }
 
 html, body{
   margin: 0;
@@ -82,7 +95,7 @@ html, body{
   -webkit-tap-highlight-color: transparent;
 }
 
-body{ min-height: 100vh; }
+body{ min-height: 100vh; min-height: var(--vh-full); }
 
 button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 
@@ -104,6 +117,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   max-width: 520px;
   margin: 0 auto;
   min-height: 100vh;
+  min-height: var(--vh-full);
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -124,7 +138,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  padding: max(10px, env(safe-area-inset-top)) var(--pad-x) 10px;
+  padding: max(10px, env(safe-area-inset-top)) max(var(--pad-x), var(--safe-r)) 10px max(var(--pad-x), var(--safe-l));
   background: rgba(255, 255, 255, .92);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
@@ -156,7 +170,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   left: 50%;
   width: min(520px, 100%);
   transform: translateX(-50%);
-  padding: 9px var(--pad-x) max(9px, env(safe-area-inset-bottom));
+  padding: 9px max(var(--pad-x), var(--safe-r)) max(9px, env(safe-area-inset-bottom)) max(var(--pad-x), var(--safe-l));
   background: rgba(255, 255, 255, .96);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--line);
@@ -223,8 +237,8 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 .substep:not(.is-active):hover{ color: var(--brand-strong); }
 
 /* ---------- Screen / panels ---------- */
-.screen{ flex: 1; padding-bottom: 90px; }
-.panel{ padding: 22px var(--pad-x) 8px; }
+.screen{ flex: 1; padding-bottom: calc(var(--steps-h) + env(safe-area-inset-bottom, 0px)); }
+.panel{ padding: 22px max(var(--pad-x), var(--safe-r)) 8px max(var(--pad-x), var(--safe-l)); }
 .panel[hidden]{ display: none; }
 
 .section-heading{ margin-bottom: 20px; }
@@ -321,6 +335,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 .panel--landing{ padding: 0; }
 .hero{
   min-height: 100vh;
+  min-height: var(--vh-full);
   display: flex;
   flex-direction: column;
   padding: max(28px, env(safe-area-inset-top)) var(--pad-x) 32px;
@@ -690,7 +705,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 
 .charge-input{ display: flex; align-items: center; gap: 5px; font-size: var(--fs-sm); color: var(--muted); }
 .charge-input input{
-  width: 64px;
+  width: clamp(56px, 16vw, 76px);
   text-align: right;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -912,7 +927,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   transform: rotate(45deg);
 }
 
-@media (max-width: 420px){
+@media (max-width: 480px){
   .split-mode{ grid-template-columns: 1fr; }
 }
 
@@ -1055,7 +1070,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, var(--safe-r)) max(20px, env(safe-area-inset-bottom)) max(20px, var(--safe-l));
   backdrop-filter: blur(2px);
 }
 .modal-overlay[hidden]{ display: none; }
@@ -1067,6 +1082,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   max-width: 380px;
   box-shadow: var(--shadow-lift);
   max-height: 90vh;
+  max-height: calc(var(--vh-full) * .9);
   overflow-y: auto;
 }
 .modal__header{
@@ -1125,6 +1141,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  padding-inline: var(--safe-l) var(--safe-r);
   backdrop-filter: blur(2px);
 }
 .sheet-overlay[hidden]{ display: none; }
@@ -1136,6 +1153,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   border-radius: 22px 22px 0 0;
   box-shadow: var(--shadow-sheet);
   max-height: 88vh;
+  max-height: calc(var(--vh-full) * .88);
   overflow-y: auto;
   padding-bottom: max(18px, env(safe-area-inset-bottom));
   animation: sheet-up .24s cubic-bezier(.22, .9, .3, 1);
@@ -1278,7 +1296,6 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 
 /* จอเล็กมาก: ลดขนาดตัวอักษรหัวข้อ ไม่ให้ล้น */
 @media (max-width: 360px){
-  :root{ --pad-x: 14px; }
   .page-title{ font-size: 1.32rem; }
   .hero__title{ font-size: 1.8rem; }
   .split-card__main{ grid-template-columns: 40px minmax(0, 1fr) auto; padding: 13px; }
@@ -1290,17 +1307,37 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
    ให้ .app เป็นตัว scroll เอง (overflow-y:auto) แถบบนแบบ sticky จึงยังเกาะอยู่ด้านบนได้
    — ถ้าใช้ overflow:hidden เฉย ๆ เพื่อตัดมุม จะทำให้ position:sticky ใช้งานไม่ได้ */
 @media (min-width: 600px){
-  html{ font-size: 17px; }
+  html{ font-size: 106.25%; }
   body{ padding: 24px 0; }
   .app{
     height: calc(100vh - 48px);
+    height: calc(var(--vh-full) - 48px);
     min-height: 0;
     overflow-y: auto;
     border-radius: 22px;
     box-shadow: var(--shadow-lift);
   }
-  .hero{ min-height: calc(100vh - 48px); }
+  .hero{ min-height: calc(100vh - 48px); min-height: calc(var(--vh-full) - 48px); }
   .steps{ bottom: 24px; border-radius: 0 0 22px 22px; }
+}
+
+/* ---------- จอเตี้ย แนวนอน (มือถือหมุนจอ) ----------
+   กว้างเกิน 600px แต่สูงไม่ถึง 500px: ไม่ทำเป็นการ์ดลอย (กินความสูงไป 48px + มุมมน)
+   ให้เนื้อหาใช้เต็มจอและเลื่อนทั้งหน้า แถบขั้นตอนเกาะขอบล่าง และบีบแถบให้เตี้ยลง */
+@media (min-width: 600px) and (max-height: 500px){
+  body{ padding: 0; }
+  .app{
+    height: auto;
+    min-height: var(--vh-full);
+    overflow: visible;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .hero{ min-height: var(--vh-full); padding-block: max(16px, env(safe-area-inset-top)) 20px; }
+  .steps{ bottom: 0; border-radius: 0; padding-block: 4px max(4px, env(safe-area-inset-bottom)); }
+  .tab{ flex-direction: row; justify-content: center; gap: 10px; padding: 4px 6px; }
+  .tab__icon{ font-size: var(--icon-lg); }
+  :root{ --steps-h: 60px; }
 }
 
 /* ---------- แท็บเล็ต (iPad แนวตั้ง ≥768px) ----------
@@ -1334,7 +1371,11 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 @media (min-width: 1024px){
   .app{ max-width: 1040px; }
   .sheet{ max-width: 560px; }
+}
 
+/* sidebar ต้องการความสูงพอวางแท็บ 3 อัน — จอเตี้ย (เช่นมือถือแนวนอนกว้าง ≥1024px)
+   ให้ใช้แถบล่างแทน */
+@media (min-width: 1024px) and (min-height: 520px){
   .app.has-nav{
     display: grid;
     grid-template-columns: 248px minmax(0, 1fr);
@@ -1349,6 +1390,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
     top: 0;
     align-self: start;
     height: calc(100vh - 48px);
+    height: calc(var(--vh-full) - 48px);
     display: flex;
     flex-direction: column;
     background: var(--surface-soft);
@@ -1388,6 +1430,105 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   .app.has-nav .app-foot{ grid-area: foot; }
 }
 
+/* ---------- จอใหญ่ / ultrawide ----------
+   ขยายการ์ดและตัวอักษรขึ้นอีกขั้น ไม่ให้เหลือพื้นที่ว่างรอบข้างมากเกินไป */
+@media (min-width: 1440px){
+  html{ font-size: 112.5%; }
+  .app{ max-width: 1240px; }
+  .steps{ width: min(1240px, 100%); }
+}
+@media (min-width: 1920px){
+  html{ font-size: 125%; }
+  .app{ max-width: 1440px; }
+  .steps{ width: min(1440px, 100%); }
+}
+
+/* ---------- ปุ่ม/ตัวอักษรตามอุปกรณ์ ----------
+   โทรศัพท์ + จอสัมผัส: พื้นที่แตะ ≥44px และตัวอักษรไม่เล็กกว่า ~14px ตามแนวทาง HIG/Material
+   (เมาส์ใช้ค่าเดิมที่กระชับกว่า) ปรับที่ token ครั้งเดียว ทุก component เปลี่ยนตาม */
+@media (pointer: coarse), (max-width: 599px){
+  :root{
+    --tap: 44px;
+    --fs-2xs: .8125rem;   /* 13px */
+    --fs-xs:  .875rem;    /* 14px */
+    --fs-sm:  .9375rem;   /* 15px */
+    --fs-base: 1rem;      /* 16px — ป้องกัน iOS ซูมเองเมื่อโฟกัสช่องกรอก */
+  }
+  .btn--small{ min-height: var(--tap); }
+  .btn--tiny{ min-height: var(--tap); padding-inline: 14px; }
+  .appbar__more,
+  .substep{ min-height: var(--tap); }
+  .row-edit,
+  .row-del,
+  .modal__close,
+  .sheet__close{ width: var(--tap); height: var(--tap); }
+  .modal__field input,
+  .charge-input input{ min-height: var(--tap); font-size: 1rem; }
+  /* ปุ่ม +/- จำนวน: ขยายพื้นที่แตะด้วย pseudo-element โดยไม่เปลี่ยนหน้าตา/ความสูงแถว */
+  .qty-btn{ position: relative; }
+  .qty-btn::after{ content: ""; position: absolute; inset: -12px; }
+}
+
 @media (prefers-reduced-motion: reduce){
   *{ transition: none !important; animation: none !important; }
+}
+
+/* ---------- Compact: แถบเมนูเล็กลง + หน้าแรก/หน้าว่างพอดีจอ ----------
+   ไว้ท้ายไฟล์เพื่อให้ override ค่าฐานได้ทุกขนาดจอ */
+:root{ --steps-h: 68px; }
+.steps{ padding-top: 6px; gap: 2px; }
+.tab{ gap: 2px; padding: 4px 4px; }
+.tab__icon{ font-size: 1.65rem; }
+.tab__label{ font-size: var(--fs-sm); }
+
+/* หน้าที่ไม่มีแถบเมนู (landing / เลือกวิธีเพิ่มรายการ) ไม่ต้องกันที่ด้านล่าง
+   ไม่งั้นหน้าจะสูงเกินจอและต้องเลื่อน ทำให้ข้อความท้ายหน้าตกขอบ */
+.app:not(.has-nav) .screen{ padding-bottom: 0; }
+
+/* hero: ลดช่องว่างตามความสูงจอจริง ให้เนื้อหาทั้งหมดพอดีใน 1 หน้าจอ */
+.hero{ padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+.hero__title{ padding-top: clamp(12px, 4vh, 40px); }
+.hero__lead{ margin-top: clamp(8px, 1.8vh, 16px); }
+.hero__actions{ padding-top: clamp(16px, 3.5vh, 32px); }
+.hero__perks{ margin-top: clamp(12px, 2.2vh, 20px); }
+
+/* หน้าที่ยังไม่มีรายการ: ลดระยะ/กล่องว่างให้อยู่ในหน้าเดียวโดยไม่ต้องเลื่อน */
+.panel{ padding-top: clamp(12px, 2.6vh, 22px); }
+.section-heading{ margin-bottom: clamp(10px, 2vh, 20px); }
+.empty-state{ padding: clamp(16px, 4vh, 32px) 16px; }
+.empty-state__icon{ margin-bottom: 6px; }
+
+/* ปรับเพิ่ม: hero พอดีจอจริงบนมือถือทุกรุ่น + แถบเมนูเล็กลงอีก */
+.hero{ padding-top: max(20px, env(safe-area-inset-top)); }
+.hero__title{ padding-top: clamp(8px, 3vh, 40px); }
+.hero__actions{ padding-top: clamp(12px, 2.5vh, 32px); }
+.hero__perks{ margin-top: clamp(10px, 1.8vh, 20px); }
+:root{ --steps-h: 60px; }
+.steps{ padding-top: 4px; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+.tab{ padding: 2px 4px; }
+.tab__icon{ font-size: 1.45rem; }
+.tab__label{ font-size: var(--fs-xs); }
+
+/* พื้นที่กันแถบเมนูล่าง: ให้ footer เป็นตัวรับ ไม่ซ้อนกับ .screen จนหน้าสูงเกินจอ */
+.app.has-nav .screen{ padding-bottom: 12px; }
+.app.has-nav .app-foot{ padding-bottom: calc(var(--steps-h) + env(safe-area-inset-bottom, 0px) + 6px); }
+@media (min-width: 1024px) and (min-height: 520px){
+  .app.has-nav .app-foot{ padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}
+
+/* หน้าแรก: hero ใช้พื้นที่ที่เหลือหลังหัก footer แทนการบังคับสูงเต็มจอ (footer จะไม่ดันหน้าให้เลื่อน) */
+.screen{ display: flex; flex-direction: column; }
+.panel--landing:not([hidden]){ flex: 1; display: flex; flex-direction: column; }
+.panel--landing .hero{ flex: 1; min-height: 0; }
+.app-foot{ padding-top: 4px; }
+.app.has-nav .app-foot{ padding-top: 0; padding-bottom: calc(var(--steps-h) + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 1024px) and (min-height: 520px){
+  .app.has-nav .app-foot{ padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}
+
+/* มือถือ: หน้าที่มีแถบเมนู ย่อ footer ให้เหลือบรรทัดเครดิตเดียว (ข้อความความเป็นส่วนตัวอยู่หน้าแรกแล้ว) */
+@media (max-width: 599px){
+  .app.has-nav .foot-note{ display: none; }
+  .app.has-nav .foot-credit{ margin: 0; }
+  .app.has-nav .panel{ padding-bottom: 0; }
 }
