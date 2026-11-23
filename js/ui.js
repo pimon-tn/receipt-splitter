@@ -168,12 +168,12 @@ export function renderItems(bill, handlers) {
       </button>
       <div class="item-row-bottom">
         <div class="qty-stepper">
-          <button type="button" class="qty-btn qty-btn--minus" aria-label="ลดจำนวน"><i class="uicon fi-br-minus" aria-hidden="true"></i></button>
+          <button type="button" class="qty-btn qty-btn--minus" aria-label="ลดจำนวน"><i class="uicon fi fi-bs-minus-circle" aria-hidden="true"></i></button>
           <span class="item-qty" aria-label="จำนวน">${item.qty}</span>
           <button type="button" class="qty-btn qty-btn--plus" aria-label="เพิ่มจำนวน"><i class="uicon fi-br-add" aria-hidden="true"></i></button>
         </div>
         <div class="item-actions">
-          <button type="button" class="row-edit" aria-label="แก้ไขรายการ ${escapeHtml(item.name)}"><i class="uicon fi-br-edit" aria-hidden="true"></i></button>
+          <button type="button" class="row-edit" aria-label="แก้ไขรายการ ${escapeHtml(item.name)}"><i class="uicon fi fi-rr-file-edit" aria-hidden="true"></i></button>
           <button type="button" class="row-del" aria-label="ลบรายการ ${escapeHtml(item.name)}"><i class="uicon fi-br-trash-xmark" aria-hidden="true"></i></button>
         </div>
       </div>
@@ -545,7 +545,7 @@ export function openItemModal(item) {
   } else {
     delete overlay.dataset.editingId;
     $('#itemModalTitle').innerHTML = '<i class="uicon fi-br-restaurant inline-icon" aria-hidden="true"></i> เพิ่มรายการอาหาร';
-    $('#modalSubmitBtn').textContent = '+ เพิ่มรายการ';
+    $('#modalSubmitBtn').innerHTML = '<i class="fi fi-br-plus-small" aria-hidden="true"></i> เพิ่มรายการ';
     nameInput.value = '';
     qtyInput.value = '1';
     priceInput.value = '';

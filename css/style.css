@@ -22,7 +22,7 @@
   --ink:           #1A3835;   /* Dark Text: เขียวเข้มจัดเกือบดำ */
   --ink-soft:      #4a5f78;   /* ข้อความรอง */
   --muted:         #718096;   /* ข้อความจาง */
-  --del-muted:     #FF7F7F;   /* ปุ่มลบ */
+  --del-muted:     #E83A36;   /* ปุ่มลบ */
   --line:          #e3ebe8;   /* เส้นคั่น/ขอบ */
 
   /* สถานะ */
@@ -150,7 +150,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   gap: 4px;
   border: 0;
   background: transparent;
-  color: var(--brand-strong);
+  color: #E83A36;
   font-size: var(--fs-lg);
   font-weight: 600;
   padding: 8px 6px;
@@ -158,7 +158,11 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   cursor: pointer;
   min-height: 40px;
 }
-.appbar__more:hover{ background: var(--surface-tint); }
+/* ปุ่มเริ่มบิลใหม่: hover แล้วไม่มีกรอบ เปลี่ยนแค่ไอคอน (inline-block ให้ transform ทำงาน) */
+.appbar__more i,
+.btn--text i{ display: inline-block; transition: color .15s ease, transform .15s ease; }
+.appbar__more:hover i,
+.btn--text:hover i{ color: #9F1613; transform: scale(1.1); }
 
 /* ---------- Step indicator ---------- */
 .steps{
@@ -312,13 +316,17 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 .btn--text{
   background: transparent;
   border-color: transparent;
-  color: var(--muted);
+  color: #E83A36;
   font-weight: 600;
   width: 100%;
 }
-.btn--text:hover{ color: var(--danger); background: var(--danger-bg); }
 .btn:hover{ box-shadow: 0 5px 14px rgba(18, 117, 110, .18); }
+/* ต้องอยู่หลัง .btn:hover ไม่งั้นเงาเขียวทับ */
+.btn--text:hover{ box-shadow: none; }
 .btn--ghost:hover{ background: var(--surface-tint); }
+/* ไอคอน fi ในปุ่ม: ถ้าเป็น inline glyph จะนั่งบน baseline ของฟอนต์ไทย (ต่ำ/สูงกว่ากลาง) — flex ให้กล่องสูง 1em แล้วจัดกลางพอดี */
+.btn > .fi{ display: flex; }
+.btn > .fi-br-plus-small{ font-size: 1.1em; }
 .btn:active{ transform: scale(.98); }
 .btn__icon{ font-size: var(--icon-sm); }
 
@@ -605,7 +613,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 .row-edit{
   border: 0;
   background: transparent;
-  color: var(--warn);
+  color: #FF6C1A;
   cursor: pointer;
   font-size: calc(var(--icon-md) * .9);
   width: 38px;
@@ -615,7 +623,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   display: grid;
   place-items: center;
 }
-.row-edit:hover{ color: var(--warn-strong); }
+.row-edit:hover{ color: #C64800; }
 
 .row-del{
   border: 0;
@@ -630,8 +638,15 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
   display: grid;
   place-items: center;
 }
-.row-del:hover{ color: var(--danger); }
-
+.row-del:hover{ color: #9F1613; }
+.row-edit i,
+.row-del i,
+#addPersonBtn i,
+#emptyAddPersonBtn i{ transition: transform .15s ease; }
+.row-edit:hover i,
+.row-del:hover i,
+#addPersonBtn:hover i,
+#emptyAddPersonBtn:hover i{ transform: scale(1.1); }
 .subtotal-bar{
   display: flex;
   align-items: center;

@@ -15,6 +15,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-bold-rounded/css/uicons-bold-rounded.css">
 <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-bold-straight/css/uicons-bold-straight.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -33,7 +35,7 @@
           <p class="hero__tag">Good Food, Greater Together</p>
         </div>
       </div>
-    <button class="appbar__more" id="restartBtn" type="button" aria-label="เริ่มบิลใหม่">&#8635;</button>
+    <button class="appbar__more" id="restartBtn" type="button" aria-label="เริ่มบิลใหม่"><i class="fi fi-br-refresh"></i></button>
   </header>
 
   <!-- ===== Step indicator (ขั้นตอนที่ 1-4) ===== -->
@@ -76,7 +78,7 @@
       <p class="hero__lead">สแกน · แบ่ง · เคลียร์กันได้<br>ง่าย ๆ ใน 4 ขั้นตอน</p>
 
       <div class="hero__actions">
-        <button class="btn btn--primary btn--big" id="startBtn" type="button">เริ่มใช้งาน &rarr;</button>
+        <button class="btn btn--primary btn--big" id="startBtn" type="button">เริ่มใช้งาน</button>
         <button class="btn btn--ghost btn--big" id="resumeBtn" type="button" hidden>ทำบิลเดิมต่อ</button>
       </div>
 
@@ -144,7 +146,7 @@
     <div class="section-heading">
       <div class="section-row section-row--title">
         <h2 class="page-title">รายการอาหาร <span class="items-count" id="itemsCount">0 รายการ</span></h2>
-        <button class="btn btn--tiny" id="addItemBtn" type="button">＋ เพิ่มรายการ</button>
+        <button class="btn btn--tiny" id="addItemBtn" type="button"><i class="fi fi-br-plus-small" aria-hidden="true"></i> เพิ่มรายการ</button>
       </div>
       <p class="panel__hint">ตรวจสอบและแก้ไขรายการอาหารให้ตรงกับใบเสร็จ</p>
     </div>
@@ -155,7 +157,7 @@
       <i class="empty-state__icon uicon fi-br-add-document" aria-hidden="true"></i>
       <p class="empty-state__title">ยังไม่มีรายการอาหาร</p>
       <p class="empty-state__desc">เพิ่มรายการแรกเพื่อเริ่มหารบิล</p>
-      <button class="btn btn--primary btn--small" id="emptyAddItemBtn" type="button">＋ เพิ่มรายการ</button>
+      <button class="btn btn--primary btn--small" id="emptyAddItemBtn" type="button"><i class="fi fi-br-plus-small" aria-hidden="true"></i> เพิ่มรายการ</button>
     </div>
 
     <div class="subtotal-bar">
@@ -219,8 +221,8 @@
     <div class="section-row">
       <p class="field-label"><i class="uicon fi-br-users inline-icon" aria-hidden="true"></i> รายชื่อ <span class="items-count" id="peopleCount">0 คน</span></p>
       <div class="section-actions">
-        <button class="btn btn--ghost btn--tiny" id="clearPeopleBtn" type="button" hidden>ล้างรายชื่อ</button>
-        <button class="btn btn--tiny" id="addPersonBtn" type="button">＋ เพิ่มคน</button>
+        <button class="btn btn--ghost btn--tiny" id="clearPeopleBtn" type="button" hidden><i class="fi fi-br-refresh" aria-hidden="true"></i> ล้างรายชื่อ</button>
+        <button class="btn btn--tiny" id="addPersonBtn" type="button"><i class="fi fi-br-plus-small" aria-hidden="true"></i> เพิ่มคน</button>
       </div>
     </div>
 
@@ -230,7 +232,7 @@
       <i class="empty-state__icon uicon fi-br-user-add" aria-hidden="true"></i>
       <p class="empty-state__title">ยังไม่มีรายชื่อ</p>
       <p class="empty-state__desc">เพิ่มเพื่อนร่วมโต๊ะเพื่อเริ่มหารบิล</p>
-      <button class="btn btn--primary btn--small" id="emptyAddPersonBtn" type="button">＋ เพิ่มคน</button>
+      <button class="btn btn--primary btn--small" id="emptyAddPersonBtn" type="button"><i class="fi fi-br-plus-small" aria-hidden="true"></i> เพิ่มคน</button>
     </div>
 
   </section>
@@ -327,7 +329,7 @@
 
     <div class="modal__actions">
       <button class="btn btn--ghost" id="modalCancelBtn" type="button">ยกเลิก</button>
-      <button class="btn btn--primary" id="modalSubmitBtn" type="button">+ เพิ่มรายการ</button>
+      <button class="btn btn--primary" id="modalSubmitBtn" type="button"><i class="fi fi-br-plus-small" aria-hidden="true"></i> เพิ่มรายการ</button>
     </div>
   </div>
 </div>
@@ -358,7 +360,7 @@
         <button class="btn btn--ghost btn--big" id="copyResultBtn" type="button">🔗 คัดลอกสรุป</button>
         <button class="btn btn--ghost btn--big" id="downloadImageBtn" type="button"><i class="uicon fi-br-download" aria-hidden="true"></i> ดาวน์โหลดรูปภาพ</button>
       </div>
-      <button class="btn btn--text" id="newBillBtn" type="button"><i class="uicon fi-br-refresh" aria-hidden="true"></i> เริ่มบิลใหม่</button>
+      <button class="btn btn--text" id="newBillBtn" type="button"><i class="fi fi-br-refresh" aria-hidden="true"></i> เริ่มบิลใหม่</button>
     </div>
   </div>
 </div>
