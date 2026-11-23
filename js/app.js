@@ -195,9 +195,14 @@ function addPerson() {
 $('#addPersonBtn').addEventListener('click', addPerson);
 $('#emptyAddPersonBtn').addEventListener('click', addPerson);
 
-$('#clearPeopleBtn').addEventListener('click', () => {
+$('#clearPeopleBtn').addEventListener('click', async () => {
   if (!session.bill.people.length) return;
-  if (!confirm('ล้างรายชื่อคนกินทั้งหมดใช่หรือไม่?')) return;
+  const ok = await ui.confirmDialog({
+    title: 'ล้างรายชื่อทั้งหมด?',
+    message: 'รายชื่อคนกินและการเลือกผู้กินในทุกรายการจะถูกลบ (รายการอาหารยังอยู่)',
+    okLabel: 'ล้างรายชื่อ',
+  });
+  if (!ok) return;
   session.clearPeople();
   renderAll();
   ui.showToast('ล้างรายชื่อทั้งหมดแล้ว');
@@ -393,8 +398,13 @@ function downloadResultImage() {
 
 /* ============ New bill ============ */
 
-function startNewBill() {
-  if (!confirm('ล้างข้อมูลบิลปัจจุบันทั้งหมด (ยกเว้นรายชื่อคน) และเริ่มใหม่?')) return;
+async function startNewBill() {
+  const ok = await ui.confirmDialog({
+    title: 'เริ่มบิลใหม่?',
+    message: 'ข้อมูลบิลปัจจุบันทั้งหมดจะถูกล้าง ยกเว้นรายชื่อคน',
+    okLabel: 'เริ่มบิลใหม่',
+  });
+  if (!ok) return;
   session.startNew();
   splitMode = 'equal';
   ui.closeAllOverlays();

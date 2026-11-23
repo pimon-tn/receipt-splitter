@@ -35,11 +35,10 @@ function setupDom() {
   global.Event = window.Event;
   global.KeyboardEvent = window.KeyboardEvent;
 
-  // jsdom ไม่ implement prompt/confirm จริง (ของเบราว์เซอร์) — stub ไว้ให้ทดสอบได้
+  // jsdom ไม่ implement prompt จริง (ของเบราว์เซอร์) — stub ไว้ให้ทดสอบได้
+  // (confirm ไม่ stub แล้ว: แอปใช้ popup ของตัวเอง #confirmOverlay)
   window.prompt = () => null;
-  window.confirm = () => true;
   global.prompt = window.prompt;
-  global.confirm = window.confirm;
 
   window.localStorage.clear();
   return dom;
@@ -49,6 +48,14 @@ const $ = (sel) => global.document.querySelector(sel);
 const $$ = (sel) => Array.from(global.document.querySelectorAll(sel));
 
 function click(el) { el.dispatchEvent(new global.window.Event('click', { bubbles: true })); }
+const flush = () => new Promise((r) => setTimeout(r, 0));
+/** กดปุ่มใน popup ยืนยัน (#confirmOverlay) แล้วรอให้ handler แบบ async ทำงานต่อจนจบ */
+async function answerConfirm(accept) {
+  assert.equal($('#confirmOverlay').hidden, false, 'ต้องมี popup ยืนยันขึ้นมาก่อน');
+  click($(accept ? '#confirmOkBtn' : '#confirmCancelBtn'));
+  await flush();
+  assert.equal($('#confirmOverlay').hidden, true, 'popup ยืนยันต้องปิดหลังกดปุ่ม');
+}
 function setValue(el, value) {
   el.value = value;
   el.dispatchEvent(new global.window.Event('input', { bubbles: true }));
@@ -188,7 +195,8 @@ describe('การใช้งานจริงทั้งวงจร: เ�
     assert.equal($$('#itemsBody .item-card').length, 1);
     assert.equal($$('#peopleList li').length, 1);
 
-    click($('#newBillBtn')); // window.confirm ถูก stub ให้คืนค่า true ไว้แล้วใน setupDom()
+    click($('#newBillBtn'));
+    await answerConfirm(true);
 
     assert.equal($$('#itemsBody .item-card').length, 0, 'รายการอาหารต้องถูกล้าง');
     assert.equal($('#vatEnabledInput').checked, false, 'การตั้งค่า VAT ต้องรีเซ็ตกลับเป็นค่าเริ่มต้น');
@@ -236,7 +244,19 @@ describe('การใช้งานจริงทั้งวงจร: เ�
 
     click($('.tab[data-tab="people"]'));
     click($$('#assignList .assign-item')[0].querySelectorAll('.assign-tag:not(.assign-tag--all)')[0]);
+
     click($('#clearPeopleBtn'));
+    await answerConfirm(false);
+    assert.equal($$('#peopleList li').length, 2, 'กดยกเลิกแล้วรายชื่อต้องยังอยู่');
+
+    click($('#clearPeopleBtn'));
+    pressEscape();
+    await flush();
+    assert.equal($('#confirmOverlay').hidden, true, 'Escape ต้องปิด popup ยืนยัน');
+    assert.equal($$('#peopleList li').length, 2, 'Escape แล้วรายชื่อต้องยังอยู่');
+
+    click($('#clearPeopleBtn'));
+    await answerConfirm(true);
 
     assert.equal($$('#peopleList li').length, 0);
     assert.equal($('#clearPeopleBtn').hidden, true);

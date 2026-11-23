@@ -326,6 +326,7 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 .btn--ghost:hover{ background: var(--surface-tint); }
 /* ไอคอน fi ในปุ่ม: ถ้าเป็น inline glyph จะนั่งบน baseline ของฟอนต์ไทย (ต่ำ/สูงกว่ากลาง) — flex ให้กล่องสูง 1em แล้วจัดกลางพอดี */
 .btn > .fi{ display: flex; }
+.btn[hidden]{ display: none; }
 .btn > .fi-br-plus-small{ font-size: 1.1em; }
 .btn:active{ transform: scale(.98); }
 .btn__icon{ font-size: var(--icon-sm); }
@@ -1146,6 +1147,24 @@ button, input, textarea, select{ font-family: inherit; color: var(--ink); }
 .modal__field--small{ flex: 1; min-width: 0; }
 .modal__actions{ display: flex; gap: 10px; margin-top: 4px; }
 .modal__actions .btn{ flex: 1; }
+
+/* Popup ยืนยัน: อยู่เหนือ sheet (210) เพราะเปิดจากหน้าต่างแชร์ได้ */
+.modal-overlay--confirm{ z-index: 220; }
+.modal--confirm{ text-align: center; }
+.confirm__icon{
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--danger-bg);
+  color: #E83A36;
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+.confirm__message{ margin: 6px 0 18px; color: var(--ink-soft); font-size: var(--fs-sm); }
+.btn--danger{ background: #E83A36; border-color: #E83A36; color: #fff; }
+.btn--danger:hover{ background: #9F1613; border-color: #9F1613; box-shadow: 0 5px 14px rgba(159, 22, 19, .22); }
 
 /* ---------- Bottom sheets (รายละเอียดคน / แชร์) ---------- */
 .sheet-overlay{

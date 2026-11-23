@@ -519,8 +519,55 @@ export function openShareSheet() {
 }
 
 function isAnyOverlayOpen() {
-  return ['#personSheetOverlay', '#shareSheetOverlay', '#itemModalOverlay']
+  return ['#personSheetOverlay', '#shareSheetOverlay', '#itemModalOverlay', '#confirmOverlay']
     .some((sel) => !$(sel).hidden);
+}
+
+/**
+ * popup ยืนยันแทน confirm() ของเบราว์เซอร์ ให้หน้าตาเข้ากับเว็บ
+ * resolve(true) เมื่อกดยืนยัน, resolve(false) เมื่อกดยกเลิก / Escape / คลิกพื้นหลัง
+ */
+export function confirmDialog({ title, message, okLabel }) {
+  const overlay = $('#confirmOverlay');
+  const okBtn = $('#confirmOkBtn');
+  const cancelBtn = $('#confirmCancelBtn');
+  const returnFocus = document.activeElement;
+
+  $('#confirmTitle').textContent = title;
+  $('#confirmMessage').textContent = message;
+  okBtn.textContent = okLabel;
+  openSheet('#confirmOverlay');
+  cancelBtn.focus();
+
+  return new Promise((resolve) => {
+    const done = (result) => {
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey, true);
+      closeSheet('#confirmOverlay');
+      returnFocus?.focus?.();
+      resolve(result);
+    };
+    const onOk = () => done(true);
+    const onCancel = () => done(false);
+    const onBackdrop = (e) => { if (e.target === overlay) done(false); };
+    // capture: จัดการก่อน handler Escape ของ app.js ไม่ให้ไปปิดหน้าต่างแชร์ที่อยู่ข้างหลัง
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        done(false);
+      } else if (e.key === 'Tab') {
+        e.preventDefault(); // มีแค่ 2 ปุ่ม: สลับโฟกัสไปมา ไม่ให้หลุดออกจาก popup
+        (document.activeElement === okBtn ? cancelBtn : okBtn).focus();
+      }
+    };
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey, true);
+  });
 }
 
 /** ปิดทุก overlay ที่เปิดอยู่ (ใช้กับปุ่ม Escape / เริ่มบิลใหม่) */
